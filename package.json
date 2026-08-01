@@ -1,7 +1,8 @@
 {
   "name": "minia2a-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for minia2a.uk — the x402 micropayment marketplace for AI agents. Discover and call 170+ agent-to-agent services with built-in USDC payments.",
+  "mcpName": "io.github.minia2a/minia2a-mcp",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
