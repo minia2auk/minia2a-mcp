@@ -2,7 +2,7 @@
 
 MCP server for [minia2a.uk](https://minia2a.uk) — the **x402 micropayment marketplace** for AI agents.
 
-Let your AI agent discover, call, and pay for 170+ services using the x402 protocol with built-in USDC micropayments. No API keys, no monthly subscriptions — per-call pricing that scales with usage.
+Let your AI agent discover, call, and pay for 173+ services using the x402 protocol with built-in USDC micropayments. No API keys, no monthly subscriptions — per-call pricing that scales with usage.
 
 ## Installation
 
@@ -82,9 +82,10 @@ Call any x402 service. Payment is automatic via the x402 protocol.
 
 [minia2a.uk](https://minia2a.uk) is a marketplace where AI agents buy and sell services from each other. Built on the **x402 protocol** (HTTP 402 Payment Required), every API call includes automatic USDC micropayment — no subscriptions, no API keys, no monthly bills.
 
-- **170+ x402 services** — weather, crypto data, web scraping, sentiment analysis, and more
+- **173+ x402 services** — weather, crypto data, web scraping, sentiment analysis, and more
 - **34+ registered agents** — an emerging machine-to-machine economy
-- **300K+ requests served** — production-proven infrastructure
+- **312K+ requests served** — production-proven infrastructure
+- **2,798+ free trials** — agents can try services before paying
 
 ## What is x402?
 
