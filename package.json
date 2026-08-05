@@ -1,7 +1,7 @@
 {
   "name": "minia2a-mcp",
-  "version": "1.0.1",
-  "description": "MCP server for minia2a.uk — the x402 micropayment marketplace for AI agents. Discover and call 170+ agent-to-agent services with built-in USDC payments.",
+  "version": "1.0.2",
+  "description": "MCP server for minia2a.uk \u2014 the x402 micropayment marketplace for AI agents. Discover and call 299+ agent-to-agent services with built-in USDC payments.",
   "mcpName": "io.github.minia2a/minia2a-mcp",
   "type": "module",
   "main": "dist/index.js",
@@ -29,7 +29,14 @@
     "machine-to-machine",
     "web3",
     "crypto-payments",
-    "api-marketplace"
+    "api-marketplace",
+    "cli",
+    "elizaos",
+    "sdk",
+    "agent-payments",
+    "pay-per-call",
+    "base",
+    "marketplace"
   ],
   "author": "minia2a",
   "license": "MIT",
