@@ -615,6 +615,214 @@ server.tool(
   }
 );
 
+// ── Tool: check_endpoint ──────────────────────────────────────────────
+
+server.tool(
+  "minia2a_check_endpoint",
+  "Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). Checks 9 signals: HTTP reachability, JSON content-type, 4 payment headers (x-402-amount/chain/token/recipient), trial info, registration path, and /api/agent-ready handshake. Returns a score (0-100%) with per-check PASS/FAIL detail. Use this before calling a paid endpoint to verify it works with autonomous agents.",
+  {
+    endpointUrl: z
+      .string()
+      .describe("The endpoint URL to validate (e.g., 'https://minia2a.uk/x402/gas')"),
+  },
+  async ({ endpointUrl }) => {
+    const checks: { signal: string; weight: number; pass: boolean | null; detail: string }[] = [];
+    let earnedWeight = 0;
+    const totalWeight = 115;
+
+    const url = endpointUrl.replace(/\/$/, "");
+    const origin = new URL(url).origin;
+
+    // 1. HTTP reachability
+    try {
+      const probeResp = await fetch(`${url}?probe=1`, {
+        headers: { Accept: "application/json" },
+      });
+      const httpOk = probeResp.ok || probeResp.status === 402;
+      checks.push({
+        signal: "HTTP 200/402",
+        weight: 15,
+        pass: httpOk,
+        detail: `HTTP ${probeResp.status}${probeResp.ok ? " OK" : " (payment required or error)"}`,
+      });
+      if (httpOk) earnedWeight += probeResp.ok ? 15 : 7.5;
+
+      // 2. JSON Content-Type
+      const ct = probeResp.headers.get("content-type") || "";
+      const isJson = ct.includes("json");
+      checks.push({
+        signal: "JSON Content-Type",
+        weight: 5,
+        pass: isJson,
+        detail: ct || "no content-type header",
+      });
+      if (isJson) earnedWeight += 5;
+
+      // 3–6. Payment headers
+      for (const [signal, hdr, w] of [
+        ["x-402-amount", "x-402-amount", 15],
+        ["x-402-chain", "x-402-chain", 10],
+        ["x-402-token", "x-402-token", 10],
+        ["x-402-recipient", "x-402-recipient", 10],
+      ] as const) {
+        const val = probeResp.headers.get(hdr);
+        checks.push({
+          signal,
+          weight: w,
+          pass: !!val,
+          detail: val || "header missing",
+        });
+        if (val) earnedWeight += w;
+      }
+
+      // 7. Trial info
+      if (isJson) {
+        try {
+          const body = await probeResp.clone().json();
+          const trial = (body as any)._trial || (body as any).trial || {};
+          const hasTrial = trial.remaining !== undefined || trial.limit !== undefined;
+          checks.push({
+            signal: "Trial info (_trial)",
+            weight: 15,
+            pass: hasTrial,
+            detail: hasTrial
+              ? `remaining: ${trial.remaining}/${trial.limit}${trial.reset ? ", reset: " + trial.reset : ""}`
+              : "No _trial in body",
+          });
+          if (hasTrial) earnedWeight += 15;
+
+          // 8. Registration path
+          const regPath =
+            (body as any).register ||
+            (body as any).registrationUrl ||
+            ((body as any)._trial && (body as any)._trial.register) ||
+            "";
+          const regHdr = probeResp.headers.get("x-402-register");
+          const hasReg = !!regPath || !!regHdr;
+          checks.push({
+            signal: "Registration path",
+            weight: 15,
+            pass: hasReg,
+            detail: regPath
+              ? JSON.stringify(regPath).slice(0, 100)
+              : regHdr
+              ? `header: ${regHdr}`
+              : "No registration info",
+          });
+          if (hasReg) earnedWeight += 15;
+        } catch {
+          checks.push({
+            signal: "Trial info (_trial)",
+            weight: 15,
+            pass: false,
+            detail: "Body is not valid JSON",
+          });
+          checks.push({
+            signal: "Registration path",
+            weight: 15,
+            pass: false,
+            detail: "Cannot parse body",
+          });
+        }
+      }
+    } catch (e) {
+      checks.push(
+        {
+          signal: "HTTP 200/402",
+          weight: 15,
+          pass: false,
+          detail: `Unreachable: ${e instanceof Error ? e.message : "network error"}`,
+        },
+        { signal: "JSON Content-Type", weight: 5, pass: false, detail: "Endpoint unreachable" },
+        { signal: "x-402-amount", weight: 15, pass: false, detail: "Endpoint unreachable" },
+        { signal: "x-402-chain", weight: 10, pass: false, detail: "Endpoint unreachable" },
+        { signal: "x-402-token", weight: 10, pass: false, detail: "Endpoint unreachable" },
+        { signal: "x-402-recipient", weight: 10, pass: false, detail: "Endpoint unreachable" },
+        { signal: "Trial info (_trial)", weight: 15, pass: false, detail: "Endpoint unreachable" },
+        { signal: "Registration path", weight: 15, pass: false, detail: "Endpoint unreachable" }
+      );
+    }
+
+    // 9. Agent-ready endpoint
+    try {
+      const arResp = await fetch(`${origin}/api/agent-ready`, {
+        headers: { Accept: "application/json" },
+      });
+      if (arResp.ok) {
+        const arBody: any = await arResp.json();
+        const hasPayment =
+          arBody.payment && arBody.payment.chain && arBody.payment.token;
+        const hasReg =
+          arBody.registration && arBody.registration.endpoint;
+        checks.push({
+          signal: "Agent-Ready endpoint",
+          weight: 15,
+          pass: hasPayment && hasReg,
+          detail: `status:${arBody.status}, payment:${arBody.payment?.chain || "?"}/${arBody.payment?.token || "?"}`,
+        });
+        if (hasPayment && hasReg) earnedWeight += 15;
+      } else {
+        checks.push({
+          signal: "Agent-Ready endpoint",
+          weight: 15,
+          pass: false,
+          detail: `HTTP ${arResp.status} — /api/agent-ready not found`,
+        });
+      }
+    } catch {
+      checks.push({
+        signal: "Agent-Ready endpoint",
+        weight: 15,
+        pass: false,
+        detail: "unreachable or not JSON",
+      });
+    }
+
+    const score = Math.round((earnedWeight / totalWeight) * 100);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              endpoint: url,
+              score,
+              rating:
+                score >= 80
+                  ? "AUTO-MODE READY"
+                  : score >= 50
+                  ? "PARTIALLY READY"
+                  : "NOT READY",
+              summary:
+                score >= 80
+                  ? "This endpoint has the signals auto-mode agents need to pay autonomously."
+                  : score >= 50
+                  ? "Add missing 402 headers + registration info before Aug 14."
+                  : "Endpoint needs payment headers, trial info, and registration path.",
+              autoModeDeadline: "Aug 14, 2026 (3 days)",
+              checks: checks.map((c) => ({
+                signal: c.signal,
+                weight: c.weight,
+                result: c.pass === true ? "PASS" : c.pass === false ? "FAIL" : "UNKNOWN",
+                detail: c.detail,
+              })),
+              nextSteps: [
+                "1. Add x-402-amount, x-402-chain, x-402-token, x-402-recipient headers to 402 responses",
+                "2. Include _trial: {remaining, limit, reset} in JSON body",
+                "3. Add x-402-register header or register field in body",
+                "4. Create GET /api/agent-ready returning JSON with payment + registration",
+                "Full guide: https://minia2a.uk/auto-mode-validator.html",
+              ],
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+);
+
 // ── Start ────────────────────────────────────────────────────────────
 
 async function main() {
