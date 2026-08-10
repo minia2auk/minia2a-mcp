@@ -1,7 +1,7 @@
 {
   "name": "minia2a-mcp",
-  "version": "1.1.3",
-  "description": "MCP server for minia2a.uk — the x402 micropayment marketplace for AI agents. Discover and call 299 agent-to-agent services with built-in USDC payments.",
+  "version": "1.1.4",
+  "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 306 agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support.",
   "mcpName": "io.github.minia2a/minia2a-mcp",
   "type": "module",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "postinstall": "node -e \"console.log('\\n\\\\x1b[36m🔌 minia2a MCP ready!\\\\x1b[0m 299 tools for your AI agent.\\n\\\\x1b[33m📡 Browse catalog:\\\\x1b[0m  https://minia2a.uk/catalog\\n\\\\x1b[33m💰 Sell your own API:\\\\x1b[0m https://minia2a.uk/register\\n\\\\x1b[33m📦 Client SDK:\\\\x1b[0m        npm i minia2a\\n')\""
+    "postinstall": "node -e \"console.log('\\n\\\\x1b[36m🔌 minia2a MCP ready!\\\\x1b[0m 306 tools for your AI agent. Aug 14 auto-mode ready.\\n\\\\x1b[33m📡 Browse catalog:\\\\x1b[0m  https://minia2a.uk/catalog\\n\\\\x1b[33m💰 Sell your own API:\\\\x1b[0m https://minia2a.uk/register\\n\\\\x1b[33m📦 Client SDK:\\\\x1b[0m        npm i minia2a\\n')\""
   },
   "keywords": [
     "mcp",
@@ -29,7 +29,12 @@
     "machine-to-machine",
     "web3",
     "crypto-payments",
-    "api-marketplace"
+    "api-marketplace",
+    "auto-mode",
+    "claude-code",
+    "agent-payments",
+    "402-payment-required",
+    "trial-first"
   ],
   "author": "minia2a",
   "license": "MIT",
