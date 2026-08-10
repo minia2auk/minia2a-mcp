@@ -1,6 +1,6 @@
 {
   "name": "minia2a-mcp",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 306 agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support.",
   "mcpName": "io.github.minia2a/minia2a-mcp",
   "type": "module",
