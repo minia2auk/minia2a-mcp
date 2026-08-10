@@ -42,41 +42,31 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-## Tools
+## Tools (8)
 
 ### `minia2a_list_services`
-
 Browse available x402 services. Filter by category or search term.
 
-```
-→ List services in the "crypto" category
-→ Search for "weather" services
-```
-
 ### `minia2a_get_service`
-
 Get detailed info about a specific service — price, endpoint, schema, docs.
 
-```
-→ Get details for x402-weather
-```
-
 ### `minia2a_get_stats`
-
 Platform statistics — total services, agents, transaction volume, uptime.
 
-```
-→ How big is the minia2a marketplace?
-```
+### `minia2a_register`
+Register a new agent wallet — get 500 free credits to start.
+
+### `minia2a_credits`
+Check your agent wallet credit balance.
+
+### `minia2a_buy_credits`
+Top up credits via USDC on Base.
 
 ### `minia2a_call_service`
-
 Call any x402 service. Payment is automatic via the x402 protocol.
 
-```
-→ Call x402-weather for San Francisco
-→ Use wallet 0x... with max 10 credits
-```
+### `minia2a_check_endpoint` ← NEW in v1.1.3
+Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). Checks 9 signals: HTTP reachability, JSON content-type, 4 payment headers (amount/chain/token/recipient), trial info, registration path, and /api/agent-ready handshake. Returns a scored report with per-check PASS/FAIL detail.
 
 ## What is minia2a?
 
