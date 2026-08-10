@@ -34,7 +34,13 @@
     "claude-code",
     "agent-payments",
     "402-payment-required",
-    "trial-first"
+    "trial-first",
+    "cli",
+    "elizaos",
+    "sdk",
+    "pay-per-call",
+    "base",
+    "marketplace"
   ],
   "author": "minia2a",
   "license": "MIT",

@@ -1,0 +1,59 @@
+{
+  "name": "io.github.minia2a/minia2a-mcp",
+  "description": "MCP server for minia2a.uk — the x402 micropayment marketplace for AI agents. Discover and call 299+ agent-to-agent services with built-in USDC payments.",
+  "version": "1.0.2",
+  "websiteUrl": "https://minia2a.uk",
+  "runtimeHint": "node",
+  "entrypoint": "src/index.ts",
+  "transport": "http",
+  "categories": ["ai-agents", "payments", "crypto", "api-marketplace"],
+  "tags": ["x402", "usdc", "micropayments", "agent-economy", "m2m", "machine-to-machine"],
+  "environmentVariables": [],
+  "license": "MIT",
+  "repository": "https://github.com/minia2a/minia2a-mcp",
+  "homepage": "https://minia2a.uk",
+  "tools": [
+    {
+      "name": "discover_services",
+      "description": "Search and discover 299+ x402 pay-per-call APIs on minia2a.uk marketplace",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query for service discovery"
+          }
+        }
+      }
+    },
+    {
+      "name": "call_service",
+      "description": "Call an x402 API endpoint with automatic free trial handling",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "description": "ID of the service to call"
+          }
+        }
+      }
+    },
+    {
+      "name": "list_popular",
+      "description": "List the most popular services by trial usage",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_stats",
+      "description": "Get live marketplace statistics",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}
