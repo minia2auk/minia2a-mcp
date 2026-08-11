@@ -1,58 +1,137 @@
 {
   "name": "io.github.minia2a/minia2a-mcp",
-  "description": "MCP server for minia2a.uk — the x402 micropayment marketplace for AI agents. Discover and call 299+ agent-to-agent services with built-in USDC payments.",
-  "version": "1.0.2",
+  "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 306 agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support.",
+  "version": "1.1.5",
   "websiteUrl": "https://minia2a.uk",
   "runtimeHint": "node",
-  "entrypoint": "src/index.ts",
-  "transport": "http",
-  "categories": ["ai-agents", "payments", "crypto", "api-marketplace"],
-  "tags": ["x402", "usdc", "micropayments", "agent-economy", "m2m", "machine-to-machine"],
+  "entrypoint": "dist/index.js",
+  "transport": "stdio",
+  "categories": ["ai-agents", "payments", "crypto", "api-marketplace", "developer-tools"],
+  "tags": ["x402", "usdc", "micropayments", "agent-economy", "m2m", "machine-to-machine", "auto-mode", "claude-code", "agent-payments", "402-payment-required", "trial-first", "pay-per-call"],
   "environmentVariables": [],
   "license": "MIT",
   "repository": "https://github.com/minia2a/minia2a-mcp",
   "homepage": "https://minia2a.uk",
   "tools": [
     {
-      "name": "discover_services",
-      "description": "Search and discover 299+ x402 pay-per-call APIs on minia2a.uk marketplace",
+      "name": "minia2a_list_services",
+      "description": "List available x402 services on minia2a.uk — the micropayment marketplace for AI agents. Returns service name, description, price, and endpoint for each service.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query": {
+          "category": {
             "type": "string",
-            "description": "Search query for service discovery"
+            "description": "Filter by category (ai, crypto, finance, web, security, tools, utility, defi, identity, infra, text, premium)"
+          },
+          "search": {
+            "type": "string",
+            "description": "Search query to filter services by name or description"
           }
         }
       }
     },
     {
-      "name": "call_service",
-      "description": "Call an x402 API endpoint with automatic free trial handling",
+      "name": "minia2a_get_service",
+      "description": "Get detailed information about a specific x402 service on minia2a.uk, including its price, endpoint URL, input schema, and usage instructions.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "serviceId": {
             "type": "string",
-            "description": "ID of the service to call"
+            "description": "ID or slug of the service to get details for"
           }
-        }
+        },
+        "required": ["serviceId"]
       }
     },
     {
-      "name": "list_popular",
-      "description": "List the most popular services by trial usage",
+      "name": "minia2a_get_stats",
+      "description": "Get current platform statistics for minia2a.uk — total services, registered agents, transaction volume, uptime, and more.",
       "inputSchema": {
         "type": "object",
         "properties": {}
       }
     },
     {
-      "name": "get_stats",
-      "description": "Get live marketplace statistics",
+      "name": "minia2a_register",
+      "description": "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value). No signature, no gas, no KYC.",
       "inputSchema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Your agent name"
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    {
+      "name": "minia2a_credits",
+      "description": "Check your credit balance on minia2a.uk. Returns remaining credits, value in USDC, and trial status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wallet": {
+            "type": "string",
+            "description": "Your wallet address (0x...)"
+          }
+        },
+        "required": ["wallet"]
+      }
+    },
+    {
+      "name": "minia2a_buy_credits",
+      "description": "Purchase more credits on minia2a.uk. Sends USDC on Base chain via x402 protocol. 1 USDC = 200 credits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "wallet": {
+            "type": "string",
+            "description": "Your wallet address (0x...)"
+          },
+          "amountUsdc": {
+            "type": "number",
+            "description": "Amount of USDC to spend (minimum 1)"
+          }
+        },
+        "required": ["wallet", "amountUsdc"]
+      }
+    },
+    {
+      "name": "minia2a_call_service",
+      "description": "Call an x402 service on minia2a.uk. The x402 protocol handles micropayment automatically — you pay per call in USDC. Free trial available for new services.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "description": "ID or slug of the service to call"
+          },
+          "wallet": {
+            "type": "string",
+            "description": "Your wallet address for payment (optional — uses free trial if omitted)"
+          },
+          "params": {
+            "type": "object",
+            "description": "Parameters to pass to the service"
+          }
+        },
+        "required": ["serviceId"]
+      }
+    },
+    {
+      "name": "minia2a_check_endpoint",
+      "description": "Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). Checks 9 signals: HTTP reachability, JSON content-type, 4 payment headers, trial info, registration path, and /api/agent-ready handshake.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL of the x402 endpoint to validate"
+          }
+        },
+        "required": ["url"]
       }
     }
   ]
