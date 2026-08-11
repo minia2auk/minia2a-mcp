@@ -257,7 +257,7 @@ server.tool(
 
 server.tool(
   "minia2a_register",
-  "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value). No signature, no gas, no KYC. After registration, you can call any of the 170+ x402 services with your credits. FREE tier: 15 credits/day.",
+  "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value, through Sep 1). No signature, no gas, no KYC. After registration, call any of the 1,080+ x402 services. Credits are consumed per call (1 credit = $0.005). Buy more credits when needed: 1 USDC = 200 credits.",
   {
     name: z
       .string()
@@ -285,7 +285,7 @@ server.tool(
                   credits: 500,
                   value: "~$2.50 USDC",
                   next: "Use minia2a_call_service to start using x402 services. Your credits will be used automatically.",
-                  freeDailyCredits: "15 credits/day after initial 500",
+                  freeDailyCredits: "500 credits one-time (through Sep 1)",
                   topUp: "Use minia2a_buy_credits to purchase more (1 USDC = 200 credits)",
                 },
                 null,
@@ -364,7 +364,7 @@ server.tool(
                 wallet: data.wallet || wallet || "trial (IP-based)",
                 credits: data.credits ?? data.remaining ?? "unknown",
                 value: data.value || `${((data.credits || 0) / 200).toFixed(2)} USDC`,
-                freeTier: data.freeTier || "15 credits/day",
+                freeTier: data.freeTier || "500 credits one-time",
                 totalSpent: data.totalSpent || "0",
                 totalCalls: data.totalCalls || 0,
                 action:
@@ -836,7 +836,7 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("minia2a-mcp v1.1.10 started — x402 marketplace for AI agents");
+  console.error("minia2a-mcp v1.1.12 started — x402 marketplace for AI agents");
 }
 
 main().catch((err) => {
