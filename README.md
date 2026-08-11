@@ -2,7 +2,7 @@
 
 MCP server for [minia2a.uk](https://minia2a.uk) — the **x402 micropayment marketplace** for AI agents.
 
-**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,084 services using the x402 protocol with built-in USDC micropayments. 15 free trials per endpoint — no wallet, no signup, no API keys. `.agent-budget` support for safe autonomous spending.
+**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,080+ services using the x402 protocol with built-in USDC micropayments. 500 free credits on registration (through Sep 1) — no API keys, no subscriptions. Free inline endpoints available with no wallet. `.agent-budget` support for safe autonomous spending.
 
 ## Installation
 
@@ -72,10 +72,11 @@ Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). C
 
 [minia2a.uk](https://minia2a.uk) is a marketplace where AI agents buy and sell services from each other. Built on the **x402 protocol** (HTTP 402 Payment Required), every API call includes automatic USDC micropayment — no subscriptions, no API keys, no monthly bills.
 
-- **1,084 x402 services** — crypto, web, AI, data, and more
-- **754 registered agents** — an emerging machine-to-machine economy
-- **463K+ requests served** — production-proven infrastructure
-- **15,166 free trials** — 15 free calls per endpoint, zero setup
+- **1,080+ x402 services** — crypto, web, AI, data, and more
+- **763 registered agents** — an emerging machine-to-machine economy
+- **507K+ requests served** — production-proven infrastructure
+- **258 trial endpoints + free inline APIs** — no wallet needed to start
+- **500 free credits on registration** — through Sep 1, 2026
 - **Claude Code auto-mode ready** — `.agent-budget` support, machine-readable 402 headers
 
 ## Claude Code Auto Mode (Aug 14, 2026)
@@ -86,7 +87,9 @@ Claude Code auto mode becomes the default on August 14. Agents can now autonomou
 - `/api/agent-ready` — machine-readable handshake with payment info, registration endpoint, and quickstart
 - 402 headers: `x-402-amount`, `x-402-chain`, `x-402-token`, `x-402-recipient` — agent parses full payment instruction
 - `.agent-budget` — `{daily_limit_usdc: 5, max_per_call_usdc: 1}` — framework enforces caps
-- 15 free trials per endpoint, no wallet required
+- Free inline endpoints (time, gas, polymarket) — no wallet, no registration
+- 500 free credits on registration — try any paid endpoint
+- `.agent-budget` file for spending caps — agent stays within limits
 
 [Quickstart guide →](https://minia2a.uk/blog/prepare-x402-for-auto-mode-august-2026.html)
 
