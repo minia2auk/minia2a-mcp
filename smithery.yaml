@@ -1,0 +1,101 @@
+# Smithery.ai auto-discovery configuration for minia2a-mcp
+# Smithery crawls GitHub repos with this file and auto-indexes MCP servers
+
+name: minia2a-mcp
+description: |
+  Agent-to-agent API marketplace with built-in x402 micropayments.
+  Discover and call 1,087+ pay-per-call services (AI inference, crypto data,
+  web scraping, CAPTCHA solving) with automatic USDC settlement on 8 chains.
+  Claude Code auto-mode ready with HTTP 402 machine-readable payment headers.
+  15 free trials per endpoint, no wallet required to start.
+
+repository: https://github.com/minia2a/minia2a-mcp
+homepage: https://minia2a.uk
+icon: https://minia2a.uk/favicon.ico
+
+categories:
+  - ai-agents
+  - payments
+  - crypto
+  - api-marketplace
+  - developer-tools
+
+tags:
+  - x402
+  - usdc
+  - micropayments
+  - agent-economy
+  - m2m
+  - auto-mode
+  - claude-code
+  - pay-per-call
+  - trial-first
+
+runtime: node
+transport: stdio
+entrypoint: dist/index.js
+
+# Tools exposed by this MCP server
+tools:
+  - name: minia2a_list_services
+    description: |
+      List available x402 pay-per-call services. Returns service name, description,
+      price in USD cents, category, and trial availability. Filter by category
+      (ai, crypto, utility, tools) or search by keyword.
+    readOnly: true
+
+  - name: minia2a_get_service
+    description: |
+      Get detailed info about a specific x402 service. Returns full endpoint URL,
+      pricing, supported chains, trial count, and usage instructions.
+    readOnly: true
+
+  - name: minia2a_get_stats
+    description: |
+      Get minia2a marketplace stats: total services, registered agents, trial usage,
+      transaction volume, and platform health.
+    readOnly: true
+
+  - name: minia2a_credits
+    description: |
+      Check credit balance for a registered wallet address. Returns remaining
+      credits, lifetime credits issued, and total spent.
+    readOnly: true
+
+  - name: minia2a_check_endpoint
+    description: |
+      Verify an x402 endpoint is healthy and responding. Returns status code,
+      payment headers, trial info, and response time. Useful before spending credits.
+    readOnly: true
+
+  - name: minia2a_register
+    description: |
+      Register a new wallet with minia2a. Returns wallet address and 500 free
+      credits ($2.50 value). No email required — just a wallet address.
+    readOnly: false
+    destructive: true
+
+  - name: minia2a_buy_credits
+    description: |
+      Purchase additional credits using USDC on Base. Returns payment instructions
+      with x402 HTTP 402 headers for automatic agent settlement.
+    readOnly: false
+    destructive: true
+
+  - name: minia2a_call_service
+    description: |
+      Call any x402 service by name or ID. Handles HTTP 402 payment flow
+      automatically. Returns service response. Requires credits or USDC balance.
+    readOnly: false
+    destructive: true
+
+# Minimum Claude Code version for auto-mode
+minClaudeCodeVersion: "1.0.0"
+
+# Auto-mode compatibility
+autoModeCompatible: true
+autoModeFeatures:
+  - machine-readable-402-headers
+  - trial-first-access
+  - agent-budget-support
+  - no-human-registration-required
