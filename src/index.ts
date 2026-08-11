@@ -836,7 +836,7 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("minia2a-mcp v1.1.2 started — x402 marketplace for AI agents");
+  console.error("minia2a-mcp v1.1.10 started — x402 marketplace for AI agents");
 }
 
 main().catch((err) => {
