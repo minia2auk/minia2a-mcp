@@ -74,7 +74,7 @@ function formatCents(cents: number): string {
 
 const server = new McpServer({
   name: "minia2a",
-  version: "1.1.2",
+  version: "1.1.7",
 });
 
 // ── Tool: list_services ──────────────────────────────────────────────
@@ -97,6 +97,7 @@ server.tool(
       .default(20)
       .describe("Max number of results to return (default 20)"),
   },
+  { readOnlyHint: true },
   async ({ category, search, limit }) => {
     let services = await fetchServices();
 
@@ -156,6 +157,7 @@ server.tool(
   {
     serviceId: z.string().describe("The service ID or name to get details for"),
   },
+  { readOnlyHint: true },
   async ({ serviceId }) => {
     const services = await fetchServices();
     const service = services.find(
@@ -209,6 +211,7 @@ server.tool(
   "minia2a_get_stats",
   "Get current platform statistics for minia2a.uk — total services, registered agents, transaction volume, uptime, and more. Useful for understanding the marketplace's scale and health.",
   {},
+  { readOnlyHint: true },
   async () => {
     const stats = await fetchStats();
 
@@ -260,6 +263,7 @@ server.tool(
       .string()
       .describe("A name for your agent (e.g., 'my-trading-bot')"),
   },
+  { destructiveHint: true },
   async ({ name }) => {
     try {
       const res = await fetch(`${MINIA2A_API}/v1/register-simple`, {
@@ -342,6 +346,7 @@ server.tool(
       .optional()
       .describe("Your wallet address to check. If omitted, checks via trial state (IP-based)."),
   },
+  { readOnlyHint: true },
   async ({ wallet }) => {
     try {
       const endpoint = wallet
@@ -408,6 +413,7 @@ server.tool(
       .default(1)
       .describe("Amount of USDC to spend (default 1.0, minimum 1.0)"),
   },
+  { destructiveHint: true },
   async ({ wallet, amountUSDC }) => {
     try {
       const res = await fetch(`${MINIA2A_API}/v1/buy-credits`, {
@@ -483,6 +489,7 @@ server.tool(
       .default(10)
       .describe("Maximum credits you're willing to spend on this call (default 10)"),
   },
+  { destructiveHint: true },
   async ({ serviceId, params, wallet, maxCredits }) => {
     const services = await fetchServices();
     const service = services.find(
@@ -625,6 +632,7 @@ server.tool(
       .string()
       .describe("The endpoint URL to validate (e.g., 'https://minia2a.uk/x402/gas')"),
   },
+  { readOnlyHint: true },
   async ({ endpointUrl }) => {
     const checks: { signal: string; weight: number; pass: boolean | null; detail: string }[] = [];
     let earnedWeight = 0;
