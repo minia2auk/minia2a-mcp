@@ -3,6 +3,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { createRequire } from "node:module";
+
+// Read version from package.json at runtime so the banner + handshake never drift
+// from the published version (this has gone stale three times before).
+const VERSION = (() => {
+  try {
+    const require = createRequire(import.meta.url);
+    return (require("../package.json") as { version?: string }).version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+})();
 
 const MINIA2A_API = "https://minia2a.uk/api";
 
@@ -74,7 +86,7 @@ function formatCents(cents: number): string {
 
 const server = new McpServer({
   name: "minia2a",
-  version: "1.1.7",
+  version: VERSION,
 });
 
 // ── Tool: list_services ──────────────────────────────────────────────
@@ -836,7 +848,7 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("minia2a-mcp v1.1.12 started — x402 marketplace for AI agents");
+  console.error(`minia2a-mcp v${VERSION} started — x402 marketplace for AI agents`);
 }
 
 main().catch((err) => {
