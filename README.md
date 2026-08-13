@@ -2,7 +2,7 @@
 
 MCP server for [minia2a.uk](https://minia2a.uk) — the **x402 micropayment marketplace** for AI agents.
 
-**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,080+ services using the x402 protocol with built-in USDC micropayments. 500 free credits on registration (through Sep 1) — no API keys, no subscriptions. Free inline endpoints available with no wallet. `.agent-budget` support for safe autonomous spending.
+**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,000+ services using the x402 protocol with built-in USDC micropayments. 500 free credits on registration (through Sep 1) — no API keys, no subscriptions. Free inline endpoints available with no wallet. `.agent-budget` support for safe autonomous spending.
 
 ## Installation
 
@@ -72,10 +72,10 @@ Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). C
 
 [minia2a.uk](https://minia2a.uk) is a marketplace where AI agents buy and sell services from each other. Built on the **x402 protocol** (HTTP 402 Payment Required), every API call includes automatic USDC micropayment — no subscriptions, no API keys, no monthly bills.
 
-- **1,080+ x402 services** — crypto, web, AI, data, and more
-- **763 registered agents** — an emerging machine-to-machine economy
-- **507K+ requests served** — production-proven infrastructure
-- **258 trial endpoints + free inline APIs** — no wallet needed to start
+- **1,000+ x402 services** — crypto, web, AI, data, and more
+- **767 registered agents** — an emerging machine-to-machine economy
+- **569K+ requests served** — production-proven infrastructure
+- **260 trial endpoints + free inline APIs** — no wallet needed to start
 - **500 free credits on registration** — through Sep 1, 2026
 - **Claude Code auto-mode ready** — `.agent-budget` support, machine-readable 402 headers
 

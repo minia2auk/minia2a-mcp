@@ -257,7 +257,7 @@ server.tool(
 
 server.tool(
   "minia2a_register",
-  "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value, through Sep 1). No signature, no gas, no KYC. After registration, call any of the 1,080+ x402 services. Credits are consumed per call (1 credit = $0.005). Buy more credits when needed: 1 USDC = 200 credits.",
+  "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value, through Sep 1). No signature, no gas, no KYC. After registration, call any of the 1,000+ x402 services. Credits are consumed per call (1 credit = $0.005). Buy more credits when needed: 1 USDC = 200 credits.",
   {
     name: z
       .string()
