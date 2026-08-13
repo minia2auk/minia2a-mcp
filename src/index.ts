@@ -253,7 +253,7 @@ server.tool(
               links: {
                 home: "https://minia2a.uk",
                 docs: "https://minia2a.uk/docs",
-                github: "https://github.com/minia2a",
+                npm: "https://www.npmjs.com/package/minia2a-mcp",
               },
             },
             null,
