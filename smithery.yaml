@@ -4,12 +4,12 @@
 name: minia2a-mcp
 description: |
   Agent-to-agent API marketplace with built-in x402 micropayments.
-  Discover and call 1,087+ pay-per-call services (AI inference, crypto data,
+  Discover and call 1,700+ pay-per-call services (AI inference, crypto data,
   web scraping, CAPTCHA solving) with automatic USDC settlement on 8 chains.
   Claude Code auto-mode ready with HTTP 402 machine-readable payment headers.
   15 free trials per endpoint, no wallet required to start.
 
-repository: https://github.com/minia2a/minia2a-mcp
+repository: https://github.com/minia2a-org/minia2a-mcp
 homepage: https://minia2a.uk
 icon: https://minia2a.uk/favicon.ico
 

@@ -1,7 +1,7 @@
 {
   "name": "io.github.minia2a/minia2a-mcp",
   "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 1,000+ agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support. Claude Code auto-mode ready Aug 14.",
-  "version": "1.1.7",
+  "version": "1.1.16",
   "websiteUrl": "https://minia2a.uk",
   "runtimeHint": "node",
   "entrypoint": "dist/index.js",
@@ -10,7 +10,7 @@
   "tags": ["x402", "usdc", "micropayments", "agent-economy", "m2m", "machine-to-machine", "auto-mode", "claude-code", "agent-payments", "402-payment-required", "trial-first", "pay-per-call"],
   "environmentVariables": [],
   "license": "MIT",
-  "repository": "https://github.com/minia2a/minia2a-mcp",
+  "repository": "https://github.com/minia2a-org/minia2a-mcp",
   "homepage": "https://minia2a.uk",
   "tools": [
     {

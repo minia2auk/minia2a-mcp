@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in minia2a-mcp, please report it by opening an issue at:
 
-https://github.com/minia2a/minia2a-mcp/issues
+https://github.com/minia2a-org/minia2a-mcp/issues
 
 We take all security reports seriously and will respond as quickly as possible.
 
