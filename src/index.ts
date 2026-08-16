@@ -3,6 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { Wallet } from "ethers";
 import { createRequire } from "node:module";
 
 // Read version from package.json at runtime so the banner + handshake never drift
@@ -26,6 +27,7 @@ interface Service {
   description: string;
   endpoint: string;
   price?: number;
+  priceCents?: number;
   category?: string;
   tags?: string[];
   credits?: number;
@@ -80,6 +82,53 @@ async function fetchStats(): Promise<StatsResponse> {
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)} USDC`;
+}
+
+// ── V5 wallet auth ───────────────────────────────────────────────────
+
+const REGISTER_MESSAGE_PREFIX = "minia2a register: ";
+
+// Register an agent against V5's self-custody model. If the caller supplies a
+// wallet + EIP-191 signature, use them verbatim (the caller holds the key). If
+// not, generate a fresh wallet here, sign the fixed message, and hand the
+// private key back to the caller — the platform never sees or stores it.
+async function registerAgent(name: string, wallet?: string, signature?: string) {
+  let address = wallet;
+  let sig = signature;
+  let generatedPrivateKey: string | undefined;
+
+  if (!address || !sig) {
+    const w = Wallet.createRandom();
+    address = w.address;
+    generatedPrivateKey = w.privateKey;
+    sig = await w.signMessage(`${REGISTER_MESSAGE_PREFIX}${w.address}`);
+  }
+
+  const res = await fetch(`${MINIA2A_API}/v1/register-simple`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, wallet: address, signature: sig }),
+  });
+  const data = await res.json();
+  return {
+    ok: res.ok,
+    status: res.status,
+    data,
+    wallet: address,
+    privateKey: generatedPrivateKey,
+  };
+}
+
+// The authoritative platform payment info (payTo wallet + supported networks),
+// read from the live /.well-known/x402 manifest rather than hard-coded.
+async function fetchPlatformPayment(): Promise<{ payTo?: string; networks?: Array<{ network?: string; chainId?: number; asset?: string }> }> {
+  try {
+    const res = await fetch("https://minia2a.uk/.well-known/x402");
+    if (!res.ok) return {};
+    return (await res.json()) as { payTo?: string; networks?: Array<{ network?: string; chainId?: number; asset?: string }> };
+  } catch {
+    return {};
+  }
 }
 
 // ── Server ───────────────────────────────────────────────────────────
@@ -147,7 +196,7 @@ server.tool(
                 name: s.name,
                 description: s.description,
                 endpoint: s.endpoint,
-                price: s.price ? `${s.price} credits` : "varies",
+                price: s.priceCents != null ? formatCents(s.priceCents) : "varies",
                 category: s.category || "uncategorized",
                 tags: s.tags || [],
               })),
@@ -200,12 +249,12 @@ server.tool(
               name: service.name,
               description: service.description,
               endpoint: service.endpoint,
-              price: service.price
-                ? `${service.price} credits`
-                : "credits vary by service",
+              price: service.priceCents != null
+                ? formatCents(service.priceCents)
+                : "varies by service",
               category: service.category || "uncategorized",
               tags: service.tags || [],
-              how_to_call: `Send an x402 POST to ${service.endpoint} with the required parameters. Add "x402-price: <credits>" and "x402-wallet: <your_wallet>" headers.`,
+              how_to_call: `Call ${service.endpoint}?wallet=<your-wallet> to spend registered credits, or call without a wallet to use an anonymous trial. When credits/trials run out you get HTTP 402 with an accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).`,
               documentation: `https://minia2a.uk/service/${service.id}`,
             },
             null,
@@ -269,22 +318,29 @@ server.tool(
 
 server.tool(
   "minia2a_register",
-  "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value, through Sep 1). No signature, no gas, no KYC. After registration, call any of the 1,000+ x402 services. Credits are consumed per call (1 credit = $0.005). Buy more credits when needed: 1 USDC = 200 credits.",
+  "Register for minia2a.uk with a self-custody wallet + EIP-191 signature and get 500 free credits (through Sep 1, 2026). If you don't provide a wallet+signature, this tool generates a fresh wallet, signs 'minia2a register: <your-wallet>' with EIP-191, registers it, and returns the private key — store it, the platform never holds it. 15 free trial calls are shared globally across all services; 1 credit = 1 API call on most endpoints.",
   {
     name: z
       .string()
       .describe("A name for your agent (e.g., 'my-trading-bot')"),
+    wallet: z
+      .string()
+      .optional()
+      .describe("Your existing self-custody wallet address (0x...). Omit to have a fresh wallet generated for you."),
+    signature: z
+      .string()
+      .optional()
+      .describe("EIP-191 signature of 'minia2a register: <wallet>'. Required if you supply a wallet."),
   },
   { destructiveHint: true },
-  async ({ name }) => {
+  async ({ name, wallet, signature }) => {
     try {
-      const res = await fetch(`${MINIA2A_API}/v1/register-simple`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (res.ok) {
+      const { ok, data, wallet: address, privateKey } = await registerAgent(
+        name,
+        wallet,
+        signature
+      );
+      if (ok) {
         return {
           content: [
             {
@@ -292,13 +348,18 @@ server.tool(
               text: JSON.stringify(
                 {
                   status: "registered",
-                  message: "500 free credits loaded. Start calling services!",
-                  wallet: data.wallet,
-                  credits: 500,
-                  value: "~$2.50 USDC",
-                  next: "Use minia2a_call_service to start using x402 services. Your credits will be used automatically.",
-                  freeDailyCredits: "500 credits one-time (through Sep 1)",
-                  topUp: "Use minia2a_buy_credits to purchase more (1 USDC = 200 credits)",
+                  wallet: data.wallet || address,
+                  credits: data.credits ?? 500,
+                  ...(privateKey
+                    ? {
+                        privateKey,
+                        store_this:
+                          "Store this private key securely — minia2a never holds it. It signs your future calls.",
+                      }
+                    : {}),
+                  freeTrial:
+                    "15 free trial calls shared globally across all services (per IP or per registered wallet).",
+                  next: "Use minia2a_call_service with wallet=<your-wallet> to call services. Credits decrement automatically per call.",
                 },
                 null,
                 2
@@ -315,9 +376,10 @@ server.tool(
                 {
                   status: "error",
                   error: data.error || "Registration failed",
-                  hint: data.hint || "One free account per IP. Try from a different network or generate a wallet manually.",
-                  manualRegistration:
-                    'Generate wallet: node -e "const ethers=require(\'ethers\'); console.log(new ethers.Wallet.createRandom().address)" then POST /api/v1/register-user {name, wallet} with X-Wallet-Signature',
+                  hint:
+                    data.hint ||
+                    data.curl ||
+                    "Supply name + wallet + signature (EIP-191 of 'minia2a register: <wallet>').",
                 },
                 null,
                 2
@@ -351,38 +413,35 @@ server.tool(
 
 server.tool(
   "minia2a_credits",
-  "Check your credit balance on minia2a.uk. Returns remaining credits, value in USDC, and trial status. Use this to see if you have enough credits before calling a paid service.",
-  {
-    wallet: z
-      .string()
-      .optional()
-      .describe("Your wallet address to check. If omitted, checks via trial state (IP-based)."),
-  },
+  "Explain the V5 credit/trial model and report platform-level stats. Note: V5 has no per-wallet balance endpoint — credits decrement automatically when you call a service with ?wallet=<your-wallet>. Remaining trials are surfaced per-call via X-Trial-* headers or the 402 body.",
+  {},
   { readOnlyHint: true },
-  async ({ wallet }) => {
+  async () => {
     try {
-      const endpoint = wallet
-        ? `${MINIA2A_API}/v1/credits?wallet=${wallet}`
-        : `${MINIA2A_API}/v1/credits`;
-      const res = await fetch(endpoint);
-      const data = await res.json();
+      const stats = await fetchStats();
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify(
               {
-                status: "success",
-                wallet: data.wallet || wallet || "trial (IP-based)",
-                credits: data.credits ?? data.remaining ?? "unknown",
-                value: data.value || `${((data.credits || 0) / 200).toFixed(2)} USDC`,
-                freeTier: data.freeTier || "500 credits one-time",
-                totalSpent: data.totalSpent || "0",
-                totalCalls: data.totalCalls || 0,
-                action:
-                  data.credits === 0
-                    ? "Out of credits! Use minia2a_buy_credits to purchase more (1 USDC = 200 credits)"
-                    : "Ready to call services!",
+                status: "info",
+                balanceEndpoint:
+                  "none — V5 removed the per-wallet balance query (/api/v1/credits returns 404).",
+                freeTrial:
+                  "15 free trial calls shared globally across all services (per IP or per registered wallet).",
+                registration:
+                  "500 free credits (through Sep 1, 2026) via minia2a_register with a self-custody wallet + EIP-191 signature.",
+                howToCheckRemaining:
+                  "Each call returns X-Trial-Mode / X-Trial-Wallet response headers; when trials/credits run out you get HTTP 402 with trialExhausted + nextSteps[].",
+                platform: {
+                  services: stats.services,
+                  registeredAgents: stats.registeredAgents,
+                  totalVolume: formatCents(stats.totalVolumeCents),
+                  totalTransactions: stats.totalTransactions,
+                  totalRequests: stats.totalRequests.toLocaleString(),
+                  uptimeHours: stats.uptime,
+                },
               },
               null,
               2
@@ -414,42 +473,60 @@ server.tool(
 
 server.tool(
   "minia2a_buy_credits",
-  "Purchase more credits on minia2a.uk. Sends USDC on Base chain via x402 protocol. 1 USDC = 200 credits. Minimum purchase: 1 USDC.",
+  "Claim credits from a completed USDC transfer. Send USDC on a supported chain (Base, Algorand, etc.) to the minia2a platform wallet, then submit the transaction hash here to credit your wallet. V5 has no in-app balance purchase — top-ups are claimed from an on-chain transfer.",
   {
     wallet: z
       .string()
-      .describe("Your wallet address that will send the USDC payment"),
-    amountUSDC: z
-      .number()
+      .describe("Your wallet address that sent the USDC"),
+    txHash: z
+      .string()
+      .describe("The transaction hash of your USDC transfer to the platform wallet"),
+    agentName: z
+      .string()
       .optional()
-      .default(1)
-      .describe("Amount of USDC to spend (default 1.0, minimum 1.0)"),
+      .describe("Optional agent name"),
   },
   { destructiveHint: true },
-  async ({ wallet, amountUSDC }) => {
+  async ({ wallet, txHash, agentName }) => {
     try {
+      const payment = await fetchPlatformPayment();
       const res = await fetch(`${MINIA2A_API}/v1/buy-credits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet, amount: amountUSDC }),
+        body: JSON.stringify({
+          wallet,
+          txHash,
+          ...(agentName ? { agentName } : {}),
+        }),
       });
       const data = await res.json();
+      if (res.ok) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                { status: "credits_claimed", ...data },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify(
               {
-                status: res.status === 200 ? "payment_required" : "info",
-                creditsToReceive: amountUSDC * 200,
-                amountUSDC,
-                chain: "Base",
-                platformWallet:
-                  data.platformWallet ||
-                  "0xf16F0882de08315B438E9f3a2Abfb2d2E5d94ECA",
-                instructions: `Send exactly ${amountUSDC} USDC on Base to the platform wallet address. Include your wallet address (${wallet}) in the transaction memo/calldata. After confirmation, credits appear automatically.`,
-                autoDetect:
-                  "Credits are auto-detected from on-chain USDC transfers. No manual claiming needed.",
+                status: "error",
+                error: data.error || "Credit claim failed",
+                hint:
+                  data.hint ||
+                  "Send USDC to the platform wallet first, then submit {wallet, txHash}.",
+                platformWallet: payment.payTo,
+                supportedNetworks: payment.networks?.map((n) => n.network),
               },
               null,
               2
@@ -481,11 +558,11 @@ server.tool(
 
 server.tool(
   "minia2a_call_service",
-  "Call an x402 service on minia2a.uk. The x402 protocol handles micropayment automatically — you pay per call in USDC. The response includes the service output and payment confirmation.",
+  "Call an x402 service on minia2a.uk. Pass wallet=<your-wallet> to spend registered credits (decremented automatically), or omit it to use an anonymous IP trial. When credits/trials run out the endpoint returns HTTP 402 with a machine-readable accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).",
   {
     serviceId: z
       .string()
-      .describe("The service ID (e.g., 'x402-weather') or full endpoint path"),
+      .describe("The service ID (e.g., 'x402-gas') or full endpoint path"),
     params: z
       .record(z.string(), z.unknown())
       .optional()
@@ -494,15 +571,10 @@ server.tool(
     wallet: z
       .string()
       .optional()
-      .describe("Your Ethereum wallet address for x402 payment (if you have one)"),
-    maxCredits: z
-      .number()
-      .optional()
-      .default(10)
-      .describe("Maximum credits you're willing to spend on this call (default 10)"),
+      .describe("Your registered self-custody wallet address (0x...) to spend credits from"),
   },
   { destructiveHint: true },
-  async ({ serviceId, params, wallet, maxCredits }) => {
+  async ({ serviceId, params, wallet }) => {
     const services = await fetchServices();
     const service = services.find(
       (s) =>
@@ -526,27 +598,29 @@ server.tool(
     const endpoint = service.endpoint.startsWith("http")
       ? service.endpoint
       : `https://minia2a.uk${service.endpoint}`;
+    const url = new URL(endpoint);
+    if (wallet) url.searchParams.set("wallet", wallet);
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "x402-version": "1.0",
-      "x402-max-credits": String(maxCredits),
+      "User-Agent": `minia2a-mcp/${VERSION}`,
     };
 
-    if (wallet) {
-      headers["x402-wallet"] = wallet;
-    }
-
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(url.toString(), {
         method: "POST",
         headers,
         body: JSON.stringify(params),
       });
 
-      // x402: 402 means payment required (needs credits)
+      // x402: 402 means payment required (trials/credits exhausted)
       if (res.status === 402) {
-        const paymentInfo = await res.text();
+        let payment: any = {};
+        try {
+          payment = await res.json();
+        } catch {
+          payment = { raw: await res.text() };
+        }
         return {
           content: [
             {
@@ -555,11 +629,17 @@ server.tool(
                 {
                   status: "payment_required",
                   service: service.name,
-                  message:
-                    "This service requires credits. Register at https://minia2a.uk to get free trial credits.",
-                  payment_details: paymentInfo,
-                  action:
-                    "Visit https://minia2a.uk/register to create an account and receive free credits.",
+                  x402Version: payment.x402Version ?? 2,
+                  message: payment.message || payment.error || "Payment required.",
+                  trialExhausted: payment.trialExhausted ?? false,
+                  accepts: payment.accepts ?? [],
+                  nextSteps: payment.nextSteps ?? [
+                    "1. Register for 500 free credits: minia2a_register (signs 'minia2a register: <wallet>' with EIP-191).",
+                    "2. Or pay per call: send USDC to the payTo address in accepts[0], then retry with a PAYMENT-SIGNATURE header (x402 V2).",
+                  ],
+                  howToProceed: wallet
+                    ? "Trials/credits for this wallet are exhausted. Register fresh or pay per call."
+                    : "Anonymous IP trial exhausted. Run minia2a_register for 500 free credits.",
                 },
                 null,
                 2
@@ -602,8 +682,8 @@ server.tool(
                 endpoint,
                 result,
                 payment: wallet
-                  ? `Charged via x402 to ${wallet}`
-                  : "No wallet provided — use free credits or register for a wallet",
+                  ? `Credits decremented for ${wallet}`
+                  : "Anonymous IP trial used (15 free calls shared globally).",
               },
               null,
               2

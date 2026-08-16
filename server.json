@@ -1,7 +1,7 @@
 {
   "name": "io.github.minia2a/minia2a-mcp",
-  "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 1,000+ agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support. Claude Code auto-mode ready Aug 14.",
-  "version": "1.1.16",
+  "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 1,700+ agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support. Claude Code auto-mode ready Aug 14.",
+  "version": "1.1.17",
   "websiteUrl": "https://minia2a.uk",
   "runtimeHint": "node",
   "entrypoint": "dist/index.js",
@@ -54,68 +54,47 @@
     },
     {
       "name": "minia2a_register",
-      "description": "Register for minia2a.uk — creates an auto-generated wallet with 500 FREE credits (~$2.50 value). No signature, no gas, no KYC.",
+      "description": "Register for minia2a.uk with a self-custody wallet + EIP-191 signature and get 500 free credits (through Sep 1, 2026). If no wallet+signature is provided, a fresh wallet is generated and the private key returned.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "description": "Your agent name"
-          }
+          "name": { "type": "string", "description": "Your agent name" },
+          "wallet": { "type": "string", "description": "Your existing self-custody wallet address (0x...). Omit to auto-generate." },
+          "signature": { "type": "string", "description": "EIP-191 signature of 'minia2a register: <wallet>'. Required if wallet supplied." }
         },
         "required": ["name"]
       }
     },
     {
       "name": "minia2a_credits",
-      "description": "Check your credit balance on minia2a.uk. Returns remaining credits, value in USDC, and trial status.",
+      "description": "Explain the V5 credit/trial model and report platform stats. V5 has no per-wallet balance endpoint — credits decrement automatically per call.",
       "inputSchema": {
         "type": "object",
-        "properties": {
-          "wallet": {
-            "type": "string",
-            "description": "Your wallet address (0x...)"
-          }
-        },
-        "required": ["wallet"]
+        "properties": {}
       }
     },
     {
       "name": "minia2a_buy_credits",
-      "description": "Purchase more credits on minia2a.uk. Sends USDC on Base chain via x402 protocol. 1 USDC = 200 credits.",
+      "description": "Claim credits from a completed USDC on-chain transfer by submitting the transaction hash.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "wallet": {
-            "type": "string",
-            "description": "Your wallet address (0x...)"
-          },
-          "amountUsdc": {
-            "type": "number",
-            "description": "Amount of USDC to spend (minimum 1)"
-          }
+          "wallet": { "type": "string", "description": "Your wallet address that sent the USDC" },
+          "txHash": { "type": "string", "description": "Transaction hash of your USDC transfer to the platform wallet" },
+          "agentName": { "type": "string", "description": "Optional agent name" }
         },
-        "required": ["wallet", "amountUsdc"]
+        "required": ["wallet", "txHash"]
       }
     },
     {
       "name": "minia2a_call_service",
-      "description": "Call an x402 service on minia2a.uk. The x402 protocol handles micropayment automatically — you pay per call in USDC. Free trial available for new services.",
+      "description": "Call an x402 service on minia2a.uk with ?wallet=<your-wallet> (credits decrement) or anonymously (15 free trial calls shared globally). Handles the HTTP 402 payment flow.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "serviceId": {
-            "type": "string",
-            "description": "ID or slug of the service to call"
-          },
-          "wallet": {
-            "type": "string",
-            "description": "Your wallet address for payment (optional — uses free trial if omitted)"
-          },
-          "params": {
-            "type": "object",
-            "description": "Parameters to pass to the service"
-          }
+          "serviceId": { "type": "string", "description": "ID or slug of the service to call" },
+          "wallet": { "type": "string", "description": "Your registered self-custody wallet address (0x...) to spend credits from" },
+          "params": { "type": "object", "description": "Parameters to pass to the service" }
         },
         "required": ["serviceId"]
       }

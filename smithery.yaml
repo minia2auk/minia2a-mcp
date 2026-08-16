@@ -7,7 +7,7 @@ description: |
   Discover and call 1,700+ pay-per-call services (AI inference, crypto data,
   web scraping, CAPTCHA solving) with automatic USDC settlement on 8 chains.
   Claude Code auto-mode ready with HTTP 402 machine-readable payment headers.
-  15 free trials per endpoint, no wallet required to start.
+  15 free trial calls shared globally, no wallet required to start.
 
 repository: https://github.com/minia2a-org/minia2a-mcp
 homepage: https://minia2a.uk
@@ -58,8 +58,8 @@ tools:
 
   - name: minia2a_credits
     description: |
-      Check credit balance for a registered wallet address. Returns remaining
-      credits, lifetime credits issued, and total spent.
+      Explain the V5 credit/trial model and report platform stats. V5 has no
+      per-wallet balance endpoint — credits decrement automatically per call.
     readOnly: true
 
   - name: minia2a_check_endpoint
@@ -70,22 +70,23 @@ tools:
 
   - name: minia2a_register
     description: |
-      Register a new wallet with minia2a. Returns wallet address and 500 free
-      credits ($2.50 value). No email required — just a wallet address.
+      Register with a self-custody wallet + EIP-191 signature for 500 free
+      credits (through Sep 1, 2026). If no wallet is supplied, one is generated
+      and the private key returned.
     readOnly: false
     destructive: true
 
   - name: minia2a_buy_credits
     description: |
-      Purchase additional credits using USDC on Base. Returns payment instructions
-      with x402 HTTP 402 headers for automatic agent settlement.
+      Claim credits from a completed USDC on-chain transfer by submitting the
+      transaction hash.
     readOnly: false
     destructive: true
 
   - name: minia2a_call_service
     description: |
-      Call any x402 service by name or ID. Handles HTTP 402 payment flow
-      automatically. Returns service response. Requires credits or USDC balance.
+      Call any x402 service by name or ID with ?wallet=<your-wallet> (credits
+      decrement) or anonymously (trial). Handles the HTTP 402 payment flow.
     readOnly: false
     destructive: true
 
