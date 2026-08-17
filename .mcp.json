@@ -4,7 +4,7 @@
       "command": "npx",
       "args": ["-y", "minia2a-mcp"],
       "env": {},
-      "description": "minia2a.uk marketplace — discover and call 299+ x402 agent APIs with USDC micropayments"
+      "description": "minia2a.uk marketplace — discover and call 1,600+ x402 agent APIs with USDC micropayments"
     }
   }
 }
