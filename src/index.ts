@@ -39,6 +39,8 @@ interface StatsResponse {
   registeredAgents: number;
   totalCalls: number;
   totalVolumeCents: number;
+  realOnChain: { count: number; usdc: number };
+  realTopUps: { count: number; usdc: number };
   totalTransactions: number;
   uptime: number;
   totalRequests: number;
@@ -72,6 +74,8 @@ async function fetchStats(): Promise<StatsResponse> {
     registeredAgents: json.registration?.totalUsers || 0,
     totalCalls: json.totalCalls,
     totalVolumeCents: json.totalVolumeCents,
+    realOnChain: json.realOnChain || { count: 0, usdc: 0 },
+    realTopUps: json.realTopUps || { count: 0, usdc: 0 },
     totalTransactions: json.totalTransactions,
     uptime: json.uptime,
     totalRequests: json.totalRequests,
@@ -82,6 +86,10 @@ async function fetchStats(): Promise<StatsResponse> {
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)} USDC`;
+}
+
+function formatUsdc(usdc: number): string {
+  return `$${usdc.toFixed(2)} USDC`;
 }
 
 // ── V5 wallet auth ───────────────────────────────────────────────────
@@ -288,7 +296,9 @@ server.tool(
                 services: `${stats.services} x402 services available`,
                 agents: `${stats.registeredAgents} registered agents`,
                 totalCalls: stats.totalCalls.toLocaleString(),
-                totalVolume: formatCents(stats.totalVolumeCents),
+                totalVolume: formatUsdc(stats.realOnChain.usdc),
+                realTransactions: stats.realOnChain.count,
+                topUps: formatUsdc(stats.realTopUps.usdc),
                 totalTransactions: stats.totalTransactions,
                 totalRequests: stats.totalRequests.toLocaleString(),
                 platformFee: stats.fee,
@@ -437,7 +447,8 @@ server.tool(
                 platform: {
                   services: stats.services,
                   registeredAgents: stats.registeredAgents,
-                  totalVolume: formatCents(stats.totalVolumeCents),
+                  totalVolume: formatUsdc(stats.realOnChain.usdc),
+                  realTransactions: stats.realOnChain.count,
                   totalTransactions: stats.totalTransactions,
                   totalRequests: stats.totalRequests.toLocaleString(),
                   uptimeHours: stats.uptime,
