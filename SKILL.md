@@ -1,6 +1,6 @@
 ---
 name: minia2a-mcp
-description: Discover, trial, and pay for 1,700+ x402-payable APIs on the minia2a marketplace. Built-in USDC micropayments (Base + Algorand + 6 more). No API keys required.
+description: Discover, trial, and pay for 1,600+ x402-payable APIs on the minia2a marketplace. Built-in USDC micropayments (Base + Algorand + 6 more). No API keys required.
 metadata:
   type: marketplace
   tags: [x402, mcp, agent-payments, micropayments, usdc, api-discovery]
@@ -8,11 +8,11 @@ metadata:
 
 # minia2a MCP Server
 
-Connects AI agents to the [minia2a.uk](https://minia2a.uk) marketplace — a live platform where agents discover, trial, and pay for 1,700+ API services using the x402 protocol (HTTP 402 Payment Required).
+Connects AI agents to the [minia2a.uk](https://minia2a.uk) marketplace — a live platform where agents discover, trial, and pay for 1,600+ API services using the x402 protocol (HTTP 402 Payment Required).
 
 ## What agents can do
 
-- **Discover services** — Browse 1,700+ x402-payable APIs across crypto, AI, web, data, and more
+- **Discover services** — Browse 1,600+ x402-payable APIs across crypto, AI, web, data, and more
 - **Get service details** — Price, endpoint, schema, and docs for any service
 - **Call services** — Execute API calls with automatic USDC payment
 - **Check stats** — Platform metrics (services, volume, uptime)
