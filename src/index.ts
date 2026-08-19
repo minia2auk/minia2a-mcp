@@ -569,7 +569,7 @@ server.tool(
 
 server.tool(
   "minia2a_call_service",
-  "Call an x402 service on minia2a.uk. Pass wallet=<your-wallet> to spend registered credits (decremented automatically), or omit it to use an anonymous IP trial. When credits/trials run out the endpoint returns HTTP 402 with a machine-readable accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).",
+  "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for an anonymous IP trial (15 calls shared across the whole catalog); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your registered wallet's own 15 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does.",
   {
     serviceId: z
       .string()
@@ -582,18 +582,35 @@ server.tool(
     wallet: z
       .string()
       .optional()
-      .describe("Your registered self-custody wallet address (0x...) to spend credits from"),
+      .describe("Your registered self-custody wallet address (0x...). Without privateKey this alone does not draw on the wallet's trial bucket."),
+    privateKey: z
+      .string()
+      .optional()
+      .describe("Private key of the registered wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."),
   },
   { destructiveHint: true },
-  async ({ serviceId, params, wallet }) => {
+  async ({ serviceId, params, wallet, privateKey }) => {
     const services = await fetchServices();
-    const service = services.find(
-      (s) =>
-        s.id === serviceId ||
-        s.name.toLowerCase() === serviceId.toLowerCase() ||
-        s.name.toLowerCase().includes(serviceId.toLowerCase()) ||
-        serviceId.startsWith("x402-")
-    );
+    const want = serviceId.toLowerCase();
+    // Ordered narrowest-first. A previous version OR'd in `serviceId.startsWith("x402-")`,
+    // which matched *every* service whenever the caller passed a canonical id — so asking
+    // for x402-time called whatever sat first in the catalog. Exact id must win outright.
+    const service =
+      services.find((s) => s.id.toLowerCase() === want) ??
+      services.find((s) => s.name.toLowerCase() === want) ??
+      services.find((s) => s.name.toLowerCase().includes(want)) ??
+      // Not in the catalog snapshot: an id-shaped argument is still callable by path,
+      // which is what the old startsWith clause was reaching for.
+      (/^[a-z0-9][a-z0-9-]*$/i.test(serviceId)
+        ? {
+            id: serviceId,
+            name: serviceId,
+            description: "",
+            // The gateway routes /x402/<id> as well as /x402/<slug> (both return a 402
+            // challenge; an unknown path 404s), so pass the id through unmodified.
+            endpoint: `https://minia2a.uk/x402/${serviceId}`,
+          }
+        : undefined);
 
     if (!service) {
       return {
@@ -610,12 +627,36 @@ server.tool(
       ? service.endpoint
       : `https://minia2a.uk${service.endpoint}`;
     const url = new URL(endpoint);
-    if (wallet) url.searchParams.set("wallet", wallet);
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "User-Agent": `minia2a-mcp/${VERSION}`,
     };
+
+    // Wallet trials need a signature, not just the query param. The signed message is
+    //   minia2a trial:<wallet>:<serviceId>:<unixSeconds>
+    // where serviceId is the catalog id ("x402-time"), NOT the URL path segment ("time") —
+    // signing the slug returns the same 402 a bad signature does, so we always use service.id.
+    let trialSigner: string | null = null;
+    const key = privateKey ?? process.env.MINIA2A_PRIVATE_KEY;
+    if (key) {
+      try {
+        const signer = new Wallet(key.startsWith("0x") ? key : `0x${key}`);
+        // The gateway recovers the signer and compares it to ?wallet=, so both sides must be
+        // the key's own address — a mismatched wallet argument cannot be signed for.
+        trialSigner = signer.address;
+        const ts = Math.floor(Date.now() / 1000).toString();
+        headers["X-Wallet-Signature"] = await signer.signMessage(
+          `minia2a trial:${trialSigner}:${service.id}:${ts}`
+        );
+        headers["X-Trial-Timestamp"] = ts;
+      } catch {
+        trialSigner = null; // unusable key — fall through to the anonymous path
+      }
+    }
+
+    const walletParam = trialSigner ?? wallet;
+    if (walletParam) url.searchParams.set("wallet", walletParam);
 
     try {
       const res = await fetch(url.toString(), {
@@ -648,9 +689,11 @@ server.tool(
                     "1. Register for 500 free credits: minia2a_register (signs 'minia2a register: <wallet>' with EIP-191).",
                     "2. Or pay per call: send USDC to the payTo address in accepts[0], then retry with a PAYMENT-SIGNATURE header (x402 V2).",
                   ],
-                  howToProceed: wallet
-                    ? "Trials/credits for this wallet are exhausted. Register fresh or pay per call."
-                    : "Anonymous IP trial exhausted. Run minia2a_register for 500 free credits.",
+                  howToProceed: trialSigner
+                    ? `Signed as ${trialSigner}. A 402 here means either this wallet's 15 trials are spent, or the wallet is not registered — run minia2a_register first, then retry.`
+                    : wallet
+                      ? "wallet= alone does not reach the wallet trial bucket. Pass privateKey (or set MINIA2A_PRIVATE_KEY) so the call can be signed, or pay per call."
+                      : "Anonymous IP trial exhausted. Run minia2a_register, then call again with privateKey to use the wallet's own 15 trials.",
                 },
                 null,
                 2
@@ -682,6 +725,8 @@ server.tool(
       }
 
       const result = await res.json();
+      const trialMode = res.headers.get("x-trial-mode");
+      const trialRemaining = res.headers.get("x-trial-remaining");
       return {
         content: [
           {
@@ -692,9 +737,16 @@ server.tool(
                 service: service.name,
                 endpoint,
                 result,
-                payment: wallet
-                  ? `Credits decremented for ${wallet}`
-                  : "Anonymous IP trial used (15 free calls shared globally).",
+                // The gateway reports which bucket paid for the call; "wallet" means the
+                // signature was accepted, "ip" means it silently used the anonymous bucket.
+                trialMode: trialMode ?? "unreported",
+                trialRemaining: trialRemaining ?? null,
+                payment:
+                  trialMode === "wallet"
+                    ? `Wallet trial used for ${trialSigner}${trialRemaining ? ` — ${trialRemaining} left` : ""}`
+                    : trialMode === "ip"
+                      ? "Anonymous IP trial used (15 free calls shared across the whole catalog)."
+                      : "Served without a reported trial bucket.",
               },
               null,
               2

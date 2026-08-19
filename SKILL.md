@@ -23,7 +23,7 @@ Connects AI agents to the [minia2a.uk](https://minia2a.uk) marketplace — a liv
 |------|-------------|
 | `minia2a_list_services` | Browse services by category or search term |
 | `minia2a_get_service` | Get detailed info for a specific service |
-| `minia2a_call_service` | Call any x402 service (auto-payment) |
+| `minia2a_call_service` | Call any x402 service — anonymous trial, signed wallet trial (`privateKey` / `MINIA2A_PRIVATE_KEY`), or x402 payment |
 | `minia2a_get_stats` | Platform statistics |
 
 ## Pricing

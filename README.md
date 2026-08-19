@@ -63,7 +63,17 @@ Explain the V5 credit/trial model + platform stats. (V5 has no per-wallet balanc
 Claim credits from a completed USDC on-chain transfer by submitting your transaction hash.
 
 ### `minia2a_call_service`
-Call any x402 service with `?wallet=<your-wallet>` (credits decrement) or anonymously (trial). Handles the HTTP 402 payment flow.
+Call any x402 service. Three access paths, in the order the gateway tries them:
+
+1. **Anonymous** — call with nothing. 15 trials per IP, shared across the whole catalog.
+2. **Wallet trials** — pass `privateKey` (or set `MINIA2A_PRIVATE_KEY`) for a registered wallet's
+   own 15 trials, a bucket independent of the IP one. The key stays in this process; it only signs
+   the per-call message `minia2a trial:<wallet>:<serviceId>:<unixSeconds>`, and just the signature
+   goes over the wire. `wallet=` on its own reaches nothing — the signature is what does.
+3. **Payment** — when both buckets are empty the tool returns the 402 `accepts[]` array to settle.
+
+The response reports `trialMode` (`wallet` / `ip`) and `trialRemaining` straight from the gateway's
+headers, so you can see which bucket actually paid for the call rather than inferring it.
 
 ### `minia2a_check_endpoint` ← NEW in v1.1.3
 Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). Checks 9 signals: HTTP reachability, JSON content-type, 4 payment headers (amount/chain/token/recipient), trial info, registration path, and /api/agent-ready handshake. Returns a scored report with per-check PASS/FAIL detail.
