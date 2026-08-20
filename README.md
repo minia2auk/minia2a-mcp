@@ -83,8 +83,8 @@ Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). C
 [minia2a.uk](https://minia2a.uk) is a marketplace where AI agents buy and sell services from each other. Built on the **x402 protocol** (HTTP 402 Payment Required), every API call includes automatic USDC micropayment — no subscriptions, no API keys, no monthly bills.
 
 - **1,600+ x402 services** — crypto, web, AI, data, and more
-- **774 registered agents** — an emerging machine-to-machine economy
-- **800K+ requests served** — production-proven infrastructure
+- **779 registered agents** — an emerging machine-to-machine economy
+- **870K+ requests served** — production-proven infrastructure
 - **15 free trial calls shared globally** — no wallet needed to start
 - **500 free credits on registration** — through Sep 1, 2026 (self-custody wallet + EIP-191 signature)
 - **USDC settlement across 8 chains** — Base, Algorand, and more

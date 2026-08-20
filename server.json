@@ -1,13 +1,32 @@
 {
   "name": "io.github.minia2a/minia2a-mcp",
   "description": "MCP server for minia2a.uk — auto-mode ready x402 micropayment marketplace. Discover and call 1,600+ agent-to-agent services with built-in USDC payments, trial-first access, and .agent-budget support. Claude Code auto-mode ready Aug 14.",
-  "version": "1.1.20",
+  "version": "1.1.21",
   "websiteUrl": "https://minia2a.uk",
   "runtimeHint": "node",
   "entrypoint": "dist/index.js",
   "transport": "stdio",
-  "categories": ["ai-agents", "payments", "crypto", "api-marketplace", "developer-tools"],
-  "tags": ["x402", "usdc", "micropayments", "agent-economy", "m2m", "machine-to-machine", "auto-mode", "claude-code", "agent-payments", "402-payment-required", "trial-first", "pay-per-call"],
+  "categories": [
+    "ai-agents",
+    "payments",
+    "crypto",
+    "api-marketplace",
+    "developer-tools"
+  ],
+  "tags": [
+    "x402",
+    "usdc",
+    "micropayments",
+    "agent-economy",
+    "m2m",
+    "machine-to-machine",
+    "auto-mode",
+    "claude-code",
+    "agent-payments",
+    "402-payment-required",
+    "trial-first",
+    "pay-per-call"
+  ],
   "environmentVariables": [],
   "license": "MIT",
   "repository": "https://github.com/minia2a-org/minia2a-mcp",
@@ -41,7 +60,9 @@
             "description": "ID or slug of the service to get details for"
           }
         },
-        "required": ["serviceId"]
+        "required": [
+          "serviceId"
+        ]
       }
     },
     {
@@ -58,11 +79,22 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "Your agent name" },
-          "wallet": { "type": "string", "description": "Your existing self-custody wallet address (0x...). Omit to auto-generate." },
-          "signature": { "type": "string", "description": "EIP-191 signature of 'minia2a register: <wallet>'. Required if wallet supplied." }
+          "name": {
+            "type": "string",
+            "description": "Your agent name"
+          },
+          "wallet": {
+            "type": "string",
+            "description": "Your existing self-custody wallet address (0x...). Omit to auto-generate."
+          },
+          "signature": {
+            "type": "string",
+            "description": "EIP-191 signature of 'minia2a register: <wallet>'. Required if wallet supplied."
+          }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       }
     },
     {
@@ -79,11 +111,23 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "wallet": { "type": "string", "description": "Your wallet address that sent the USDC" },
-          "txHash": { "type": "string", "description": "Transaction hash of your USDC transfer to the platform wallet" },
-          "agentName": { "type": "string", "description": "Optional agent name" }
+          "wallet": {
+            "type": "string",
+            "description": "Your wallet address that sent the USDC"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Transaction hash of your USDC transfer to the platform wallet"
+          },
+          "agentName": {
+            "type": "string",
+            "description": "Optional agent name"
+          }
         },
-        "required": ["wallet", "txHash"]
+        "required": [
+          "wallet",
+          "txHash"
+        ]
       }
     },
     {
@@ -92,11 +136,22 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "serviceId": { "type": "string", "description": "ID or slug of the service to call" },
-          "wallet": { "type": "string", "description": "Your registered self-custody wallet address (0x...) to spend credits from" },
-          "params": { "type": "object", "description": "Parameters to pass to the service" }
+          "serviceId": {
+            "type": "string",
+            "description": "ID or slug of the service to call"
+          },
+          "wallet": {
+            "type": "string",
+            "description": "Your registered self-custody wallet address (0x...) to spend credits from"
+          },
+          "params": {
+            "type": "object",
+            "description": "Parameters to pass to the service"
+          }
         },
-        "required": ["serviceId"]
+        "required": [
+          "serviceId"
+        ]
       }
     },
     {
@@ -110,7 +165,9 @@
             "description": "URL of the x402 endpoint to validate"
           }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     }
   ]
