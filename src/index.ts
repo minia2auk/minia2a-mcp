@@ -459,7 +459,7 @@ server.tool(
                   realTransactions: stats.realOnChain.count,
                   totalTransactions: stats.totalTransactions,
                   totalRequests: stats.totalRequests.toLocaleString(),
-                  uptimeHours: stats.uptime,
+                  uptimeSeconds: stats.uptime,
                 },
               },
               null,
