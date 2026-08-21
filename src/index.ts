@@ -188,6 +188,10 @@ server.tool(
       );
     }
 
+    // `total` must reflect the FULL matching count, not the sliced page —
+    // reporting `result.length` here made the catalog look like it had only
+    // `limit` services (e.g. "total: 20" for a 1,600+ service marketplace).
+    const matched = services.length;
     const result = services.slice(0, limit);
 
     return {
@@ -196,7 +200,9 @@ server.tool(
           type: "text",
           text: JSON.stringify(
             {
-              total: result.length,
+              total: matched,
+              returned: result.length,
+              truncated: result.length < matched,
               platform: "minia2a.uk",
               payment: "x402 protocol — per-call USDC micropayments",
               services: result.map((s) => ({
@@ -302,7 +308,9 @@ server.tool(
                 totalTransactions: stats.totalTransactions,
                 totalRequests: stats.totalRequests.toLocaleString(),
                 platformFee: stats.fee,
-                uptimeHours: stats.uptime,
+                // /api/stats reports uptime in seconds — label it honestly,
+                // not as "hours" (a 12-minute uptime read as "728 hours").
+                uptimeSeconds: stats.uptime,
               },
               payment: {
                 protocol: "x402 (HTTP 402 Payment Required)",
