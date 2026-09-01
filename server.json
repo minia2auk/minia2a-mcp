@@ -85,7 +85,7 @@
     },
     {
       "name": "minia2a_register",
-      "description": "Register for minia2a.uk with a self-custody wallet + EIP-191 signature and get 500 free credits (through Sep 1, 2026). If no wallet+signature is provided, a fresh wallet is generated and the private key returned.",
+      "description": "Register for minia2a.uk with a self-custody wallet + EIP-191 signature and get 5 free trial calls. If no wallet+signature is provided, a fresh wallet is generated and the private key returned.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -142,7 +142,7 @@
     },
     {
       "name": "minia2a_call_service",
-      "description": "Call an x402 service on minia2a.uk with ?wallet=<your-wallet> (credits decrement) or anonymously (15 free trial calls shared globally). Handles the HTTP 402 payment flow.",
+      "description": "Call an x402 service on minia2a.uk with ?wallet=<your-wallet> (credits decrement) or with a registered wallet (5 free trial calls). Handles the HTTP 402 payment flow.",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -23,13 +23,13 @@ Connects AI agents to the [minia2a.uk](https://minia2a.uk) marketplace — a liv
 |------|-------------|
 | `minia2a_list_services` | Browse services by category or search term |
 | `minia2a_get_service` | Get detailed info for a specific service |
-| `minia2a_call_service` | Call any x402 service — anonymous trial, signed wallet trial (`privateKey` / `MINIA2A_PRIVATE_KEY`), or x402 payment |
+| `minia2a_call_service` | Call any x402 service — signed wallet trial (`privateKey` / `MINIA2A_PRIVATE_KEY`), or x402 payment |
 | `minia2a_get_stats` | Platform statistics |
 
 ## Pricing
 
-- **Free trial**: 15 free trial calls shared globally (per IP or registered wallet)
-- **Registration**: 500 free credits through Sep 1, 2026 (self-custody wallet + EIP-191 signature)
+- **Free trial**: 5 free trial calls per registered wallet
+- **Registration**: 5 free trial calls per registered wallet (self-custody wallet + EIP-191 signature)
 - **Pay-per-call**: Services charge per invocation via x402 (HTTP 402 `accepts[]`)
 - **Platform fee**: 5% on paid calls
 

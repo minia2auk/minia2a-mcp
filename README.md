@@ -2,7 +2,7 @@
 
 MCP server for [minia2a.uk](https://minia2a.uk) — the **x402 micropayment marketplace** for AI agents.
 
-**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,600+ services using the x402 protocol with built-in USDC micropayments. 500 free credits on registration (through Sep 1, 2026) with a self-custody wallet + EIP-191 signature — no API keys, no subscriptions. 15 free trial calls shared globally, no wallet needed to start. `.agent-budget` v1.1 support for safe autonomous spending.
+**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,600+ services using the x402 protocol with built-in USDC micropayments. 5 free trial calls per registered wallet with a self-custody wallet + EIP-191 signature — no API keys, no subscriptions. 5 free trial calls per registered wallet. `.agent-budget` v1.1 support for safe autonomous spending.
 
 ## Installation
 
@@ -54,7 +54,7 @@ Get detailed info about a specific service — price, endpoint, schema, docs.
 Platform statistics — total services, agents, transaction volume, uptime.
 
 ### `minia2a_register`
-Register with a self-custody wallet + EIP-191 signature — get 500 free credits to start. If you don't supply a wallet, one is generated for you and the private key returned.
+Register with a self-custody wallet + EIP-191 signature — get 5 free trial calls to start. If you don't supply a wallet, one is generated for you and the private key returned.
 
 ### `minia2a_credits`
 Explain the V5 credit/trial model + platform stats. (V5 has no per-wallet balance endpoint — credits decrement automatically per call.)
@@ -63,17 +63,16 @@ Explain the V5 credit/trial model + platform stats. (V5 has no per-wallet balanc
 Claim credits from a completed USDC on-chain transfer by submitting your transaction hash.
 
 ### `minia2a_call_service`
-Call any x402 service. Three access paths, in the order the gateway tries them:
+Call any x402 service. Two access paths, in the order the gateway tries them:
 
-1. **Anonymous** — call with nothing. 15 trials per IP, shared across the whole catalog.
-2. **Wallet trials** — pass `privateKey` (or set `MINIA2A_PRIVATE_KEY`) for a registered wallet's
-   own 15 trials, a bucket independent of the IP one. The key stays in this process; it only signs
+1. **Wallet trials** — pass `privateKey` (or set `MINIA2A_PRIVATE_KEY`) for a registered wallet's
+   5 free trial calls. The key stays in this process; it only signs
    the per-call message `minia2a trial:<wallet>:<serviceId>:<unixSeconds>`, and just the signature
    goes over the wire. `wallet=` on its own reaches nothing — the signature is what does.
-3. **Payment** — when both buckets are empty the tool returns the 402 `accepts[]` array to settle.
+2. **Payment** — when the wallet's trials are spent the tool returns the 402 `accepts[]` array to settle.
 
 The response reports `trialMode` (`wallet` / `ip`) and `trialRemaining` straight from the gateway's
-headers, so you can see which bucket actually paid for the call rather than inferring it.
+headers, so you can see which path actually paid for the call rather than inferring it.
 
 ### `minia2a_check_endpoint` ← NEW in v1.1.3
 Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). Checks 9 signals: HTTP reachability, JSON content-type, 4 payment headers (amount/chain/token/recipient), trial info, registration path, and /api/agent-ready handshake. Returns a scored report with per-check PASS/FAIL detail.
@@ -85,8 +84,8 @@ Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). C
 - **1,600+ x402 services** — crypto, web, AI, data, and more
 - **779 registered agents** — an emerging machine-to-machine economy
 - **870K+ requests served** — production-proven infrastructure
-- **15 free trial calls shared globally** — no wallet needed to start
-- **500 free credits on registration** — through Sep 1, 2026 (self-custody wallet + EIP-191 signature)
+- **5 free trial calls per registered wallet**
+- **5 free trial calls per registered wallet** (self-custody wallet + EIP-191 signature)
 - **USDC settlement across 8 chains** — Base, Algorand, and more
 - **Claude Code auto-mode ready** — `.agent-budget` v1.1 support, machine-readable 402 body
 
@@ -98,8 +97,8 @@ Claude Code auto mode becomes the default on August 14. Agents can now autonomou
 - `/api/agent-ready` — machine-readable handshake with payment info, registration endpoint, and quickstart
 - 402 body: `accepts[]` array (`amount`/`asset`/`network`/`payTo`/`scheme`) — agent parses full payment instruction (x402 V2)
 - `.agent-budget` v1.1 — 7-field autonomous-purchasing controls (per-call / per-task / confirmation / dedupe / settlement / audit)
-- 15 free trial calls shared globally — no wallet, no registration
-- 500 free credits on registration — try any paid endpoint
+- 5 free trial calls per registered wallet
+- 5 free trial calls per registered wallet — try any paid endpoint
 
 ```json
 {

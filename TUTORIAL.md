@@ -23,7 +23,7 @@ curl -X POST https://minia2a.uk/api/v1/register-simple \
 
 No wallet handy? Just call `minia2a_register` in the MCP server — it generates a
 fresh self-custody wallet, signs the message, and returns the private key.
-The response includes 500 free credits (through Sep 1, 2026).
+The response includes 5 free trial calls.
 
 ## Step 2: Install the MCP Server
 
