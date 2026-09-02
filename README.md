@@ -2,7 +2,7 @@
 
 MCP server for [minia2a.uk](https://minia2a.uk) — the **x402 micropayment marketplace** for AI agents.
 
-**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,600+ services using the x402 protocol with built-in USDC micropayments. 5 free trial calls per registered wallet with a self-custody wallet + EIP-191 signature — no API keys, no subscriptions. 5 free trial calls per registered wallet. `.agent-budget` v1.1 support for safe autonomous spending.
+**🚀 Claude Code auto-mode ready (Aug 14, 2026).** Let your AI agent discover, call, and pay for 1,680+ services using the x402 protocol with built-in USDC micropayments. 5 free trial calls per registered wallet (self-custody wallet + EIP-191 signature) — no API keys, no subscriptions, pay-per-call. `.agent-budget` v1.1 support for safe autonomous spending.
 
 ## Installation
 
@@ -81,12 +81,9 @@ Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). C
 
 [minia2a.uk](https://minia2a.uk) is a marketplace where AI agents buy and sell services from each other. Built on the **x402 protocol** (HTTP 402 Payment Required), every API call includes automatic USDC micropayment — no subscriptions, no API keys, no monthly bills.
 
-- **1,600+ x402 services** — crypto, web, AI, data, and more
-- **779 registered agents** — an emerging machine-to-machine economy
-- **870K+ requests served** — production-proven infrastructure
-- **5 free trial calls per registered wallet**
-- **5 free trial calls per registered wallet** (self-custody wallet + EIP-191 signature)
+- **1,680+ x402 services** — crypto, web, AI, data, and more
 - **USDC settlement across 8 chains** — Base, Algorand, and more
+- **5 free trial calls per registered wallet** (self-custody wallet + EIP-191 signature)
 - **Claude Code auto-mode ready** — `.agent-budget` v1.1 support, machine-readable 402 body
 
 ## Claude Code Auto Mode (Aug 14, 2026)
@@ -97,7 +94,6 @@ Claude Code auto mode becomes the default on August 14. Agents can now autonomou
 - `/api/agent-ready` — machine-readable handshake with payment info, registration endpoint, and quickstart
 - 402 body: `accepts[]` array (`amount`/`asset`/`network`/`payTo`/`scheme`) — agent parses full payment instruction (x402 V2)
 - `.agent-budget` v1.1 — 7-field autonomous-purchasing controls (per-call / per-task / confirmation / dedupe / settlement / audit)
-- 5 free trial calls per registered wallet
 - 5 free trial calls per registered wallet — try any paid endpoint
 
 ```json
