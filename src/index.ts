@@ -5,6 +5,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { Wallet } from "ethers";
 import { createRequire } from "node:module";
+import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
+import { ExactEvmScheme } from "@x402/evm";
+import { privateKeyToAccount } from "viem/accounts";
 
 // Read version from package.json at runtime so the banner + handshake never drift
 // from the published version (this has gone stale three times before).
@@ -137,6 +140,20 @@ async function fetchPlatformPayment(): Promise<{ payTo?: string; networks?: Arra
   } catch {
     return {};
   }
+}
+
+// Lazily wrap fetch for auto-pay. The wrapped fetch completes the x402 payment
+// (exact-permit2 USDC on Base) and retries when a service answers 402. Only built
+// when the caller explicitly opts into autoPay with a usable key — never by default.
+function makePayingFetch(privateKey: string) {
+  const hex = (privateKey.startsWith("0x")
+    ? privateKey
+    : `0x${privateKey}`) as `0x${string}`;
+  const account = privateKeyToAccount(hex);
+  return wrapFetchWithPaymentFromConfig(fetch, {
+    schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }],
+    spendControls: false,
+  });
 }
 
 // ── Server ───────────────────────────────────────────────────────────
@@ -577,7 +594,7 @@ server.tool(
 
 server.tool(
   "minia2a_call_service",
-  "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (register a wallet for 5 free trial calls); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your registered wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does.",
+  "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (register a wallet for 5 free trial calls); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your registered wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Set autoPay:true together with privateKey to have a 402 paid automatically in USDC on Base and the call retried — the wallet must hold USDC or the call still returns payment_required (never charges silently). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does.",
   {
     serviceId: z
       .string()
@@ -595,9 +612,14 @@ server.tool(
       .string()
       .optional()
       .describe("Private key of the registered wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."),
+    autoPay: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("When true and a privateKey is available, a 402 Payment Required response is paid automatically in USDC on Base via x402 and the call retried. Default false — you get a payment_required response instead of any automatic charge. Empty wallet (no USDC) still returns payment_required."),
   },
   { destructiveHint: true },
-  async ({ serviceId, params, wallet, privateKey }) => {
+  async ({ serviceId, params, wallet, privateKey, autoPay }) => {
     const services = await fetchServices();
     const want = serviceId.toLowerCase();
     // Ordered narrowest-first. A previous version OR'd in `serviceId.startsWith("x402-")`,
@@ -666,8 +688,20 @@ server.tool(
     const walletParam = trialSigner ?? wallet;
     if (walletParam) url.searchParams.set("wallet", walletParam);
 
+    // autoPay: wrap fetch so a 402 is paid in USDC on Base and retried. Only when
+    // the caller set autoPay:true AND supplied a usable key — otherwise the plain
+    // fetch below returns payment_required unchanged (no silent charge).
+    let payingFetch: typeof fetch | null = null;
+    if (autoPay && key) {
+      try {
+        payingFetch = makePayingFetch(key);
+      } catch {
+        payingFetch = null; // unusable key → fall through to plain 402 path
+      }
+    }
+
     try {
-      const res = await fetch(url.toString(), {
+      const res = await (payingFetch ?? fetch)(url.toString(), {
         method: "POST",
         headers,
         body: JSON.stringify(params),
