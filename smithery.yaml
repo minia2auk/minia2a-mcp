@@ -56,16 +56,10 @@ tools:
       transaction volume, and platform health.
     readOnly: true
 
-  - name: minia2a_credits
-    description: |
-      Explain the V5 credit/trial model and report platform stats. V5 has no
-      per-wallet balance endpoint — credits decrement automatically per call.
-    readOnly: true
-
   - name: minia2a_check_endpoint
     description: |
       Verify an x402 endpoint is healthy and responding. Returns status code,
-      payment headers, trial info, and response time. Useful before spending credits.
+      payment headers, trial info, and response time. Useful before paying.
     readOnly: true
 
   - name: minia2a_register
@@ -76,17 +70,10 @@ tools:
     readOnly: false
     destructive: true
 
-  - name: minia2a_buy_credits
-    description: |
-      Claim credits from a completed USDC on-chain transfer by submitting the
-      transaction hash.
-    readOnly: false
-    destructive: true
-
   - name: minia2a_call_service
     description: |
-      Call any x402 service by name or ID with ?wallet=<your-wallet> (credits
-      decrement) or anonymously (trial). Handles the HTTP 402 payment flow.
+      Call any x402 service by name or ID with a registered wallet (5 free
+      trial calls) or anonymously (trial). Handles the HTTP 402 payment flow.
     readOnly: false
     destructive: true
 

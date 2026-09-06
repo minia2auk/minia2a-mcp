@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "uk.minia2a/minia2a-mcp",
   "description": "minia2a.uk x402 marketplace — 1,600+ pay-per-call API services with built-in USDC micropayments.",
-  "version": "1.1.25",
+  "version": "1.1.29",
   "websiteUrl": "https://minia2a.uk",
   "runtimeHint": "node",
   "entrypoint": "dist/index.js",
@@ -12,7 +12,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "minia2a-mcp",
-      "version": "1.1.25",
+      "version": "1.1.29",
       "runtimeHint": "npx",
       "transport": {"type": "stdio"}
     }
@@ -108,41 +108,8 @@
       }
     },
     {
-      "name": "minia2a_credits",
-      "description": "Explain the V5 credit/trial model and report platform stats. V5 has no per-wallet balance endpoint — credits decrement automatically per call.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {}
-      }
-    },
-    {
-      "name": "minia2a_buy_credits",
-      "description": "Claim credits from a completed USDC on-chain transfer by submitting the transaction hash.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "wallet": {
-            "type": "string",
-            "description": "Your wallet address that sent the USDC"
-          },
-          "txHash": {
-            "type": "string",
-            "description": "Transaction hash of your USDC transfer to the platform wallet"
-          },
-          "agentName": {
-            "type": "string",
-            "description": "Optional agent name"
-          }
-        },
-        "required": [
-          "wallet",
-          "txHash"
-        ]
-      }
-    },
-    {
       "name": "minia2a_call_service",
-      "description": "Call an x402 service on minia2a.uk with ?wallet=<your-wallet> (credits decrement) or with a registered wallet (5 free trial calls). Handles the HTTP 402 payment flow.",
+      "description": "Call an x402 service on minia2a.uk with a registered wallet (5 free trial calls) or the paid 402 path. Handles the HTTP 402 payment flow.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -152,7 +119,7 @@
           },
           "wallet": {
             "type": "string",
-            "description": "Your registered self-custody wallet address (0x...) to spend credits from"
+            "description": "Your registered self-custody wallet address (0x...)"
           },
           "params": {
             "type": "object",

@@ -42,7 +42,7 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-## Tools (8)
+## Tools (6)
 
 ### `minia2a_list_services`
 Browse available x402 services. Filter by category or search term.
@@ -55,12 +55,6 @@ Platform statistics — total services, agents, transaction volume, uptime.
 
 ### `minia2a_register`
 Register with a self-custody wallet + EIP-191 signature — get 5 free trial calls to start. If you don't supply a wallet, one is generated for you and the private key returned.
-
-### `minia2a_credits`
-Explain the V5 credit/trial model + platform stats. (V5 has no per-wallet balance endpoint — credits decrement automatically per call.)
-
-### `minia2a_buy_credits`
-Claim credits from a completed USDC on-chain transfer by submitting your transaction hash.
 
 ### `minia2a_call_service`
 Call any x402 service. Two access paths, in the order the gateway tries them:

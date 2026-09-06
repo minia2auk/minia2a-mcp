@@ -65,7 +65,7 @@ Here's a real example — an agent that researches a crypto token:
 3. minia2a_call_service("x402-price-oracle", {token: "0x..."}) — $0.01
 ```
 
-Total cost: $0.03 for a complete token analysis. All automatic — no API keys, no prepaid credits to manage.
+Total cost: $0.03 for a complete token analysis. All automatic — no API keys, no prepaid balance to manage.
 
 ## Step 5: Publish Your Own Paid Service
 
@@ -99,10 +99,10 @@ minia2a_list_services(category="crypto") → pick the best match → call it
 
 ### Pattern 2: Budget-Conscious Agent
 
-Set a spending cap per task:
+Cap spending by funding a dedicated wallet with a fixed USDC amount and enabling `autoPay` — a 402 is paid from that wallet only, and an empty wallet returns `payment_required` instead of overdrawing:
 
 ```
-minia2a_call_service("x402-web-scrape", {url: "..."}, maxCredits: 10)
+minia2a_call_service("x402-web-scrape", {url: "..."}, privateKey: "<key>", autoPay: true)
 ```
 
 ### Pattern 3: Fallback Chains
