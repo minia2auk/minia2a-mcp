@@ -21,7 +21,7 @@ minia2a-mcp is an MCP server that connects AI agents to the minia2a.uk marketpla
 - **API Communication**: All requests to minia2a.uk use HTTPS.
 - **Payment Security**: Payments are handled via the x402 protocol with USDC on Base. No private keys are stored or transmitted by this MCP server.
 - **Input Validation**: Service parameters are validated server-side before execution.
-- **Rate Limiting**: Free trials are capped at 15 calls shared globally (per IP or registered wallet); beyond that, endpoints return HTTP 402.
+- **Rate Limiting**: Free trials are capped at 5 calls per signed wallet (no registration); beyond that, endpoints return HTTP 402.
 
 ## Disclosure Policy
 

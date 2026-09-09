@@ -272,7 +272,7 @@ server.tool(
                 : "varies by service",
               category: service.category || "uncategorized",
               tags: service.tags || [],
-              how_to_call: `Call ${service.endpoint} with a registered wallet (signed via privateKey) to use its 5 free trial calls, or call anonymously to hit the paid 402 path. When trials run out you get HTTP 402 with an accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).`,
+              how_to_call: `Call ${service.endpoint} with a signed wallet (privateKey) to use its 5 free trial calls — no registration needed. Or call anonymously to hit the paid 402 path. When trials run out you get HTTP 402 with an accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).`,
               documentation: `https://minia2a.uk/service/${service.id}`,
             },
             null,
@@ -340,7 +340,7 @@ server.tool(
 
 server.tool(
   "minia2a_register",
-  "Register for minia2a.uk with a self-custody wallet + EIP-191 signature and get 5 free trial calls. If you don't provide a wallet+signature, this tool generates a fresh wallet, signs 'minia2a register: <your-wallet>' with EIP-191, registers it, and returns the private key — store it, the platform never holds it. 5 free trial calls per registered wallet across all services.",
+  "Register a self-custody wallet on minia2a.uk to publish your own services (EIP-191 signature). Registration is for publishing — it is NOT required for trials: any wallet signed in minia2a_call_service already gets 5 free trial calls. If you don't provide a wallet+signature, this tool generates a fresh wallet, signs 'minia2a register: <your-wallet>' with EIP-191, registers it, and returns the private key — store it, the platform never holds it.",
   {
     name: z
       .string()
@@ -380,7 +380,7 @@ server.tool(
                       }
                     : {}),
                   freeTrial:
-                    "5 free trial calls per registered wallet across all services.",
+                    "5 free trial calls per signed wallet across all services (no registration needed).",
                   next: "Use minia2a_call_service with privateKey=<your-key> to call services with your wallet's 5 free trial calls, then pay per call in USDC when they run out.",
                 },
                 null,
@@ -435,7 +435,7 @@ server.tool(
 
 server.tool(
   "minia2a_call_service",
-  "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (register a wallet for 5 free trial calls); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your registered wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Set autoPay:true together with privateKey to have a 402 paid automatically in USDC on Base and the call retried — the wallet must hold USDC or the call still returns payment_required (never charges silently). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does.",
+  "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (sign a wallet for 5 free trial calls — no registration); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Set autoPay:true together with privateKey to have a 402 paid automatically in USDC on Base and the call retried — the wallet must hold USDC or the call still returns payment_required (never charges silently). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does.",
   {
     serviceId: z
       .string()
@@ -448,11 +448,11 @@ server.tool(
     wallet: z
       .string()
       .optional()
-      .describe("Your registered self-custody wallet address (0x...). Without privateKey this alone does not draw on the wallet's trial bucket."),
+      .describe("Your self-custody wallet address (0x...). Without privateKey this alone does not draw on the wallet's trial bucket."),
     privateKey: z
       .string()
       .optional()
-      .describe("Private key of the registered wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."),
+      .describe("Private key of your wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."),
     autoPay: z
       .boolean()
       .optional()
@@ -569,14 +569,14 @@ server.tool(
                   trialExhausted: payment.trialExhausted ?? false,
                   accepts: payment.accepts ?? [],
                   nextSteps: payment.nextSteps ?? [
-                    "1. Register for 5 free trial calls: minia2a_register (signs 'minia2a register: <wallet>' with EIP-191).",
+                    "1. Get 5 free trial calls: call with privateKey to sign 'minia2a trial:<wallet>:<serviceId>:<ts>' (no registration).",
                     "2. Or pay per call: send USDC to the payTo address in accepts[0], then retry with a PAYMENT-SIGNATURE header (x402 V2).",
                   ],
                   howToProceed: trialSigner
-                    ? `Signed as ${trialSigner}. A 402 here means either this wallet's 5 trials are spent, or the wallet is not registered — run minia2a_register first, then retry.`
+                    ? `Signed as ${trialSigner}. A 402 here means this wallet's 5 trials are spent — pay via x402, or sign a fresh wallet (no registration needed) for 5 more trials.`
                     : wallet
                       ? "wallet= alone does not reach the wallet trial bucket. Pass privateKey (or set MINIA2A_PRIVATE_KEY) so the call can be signed, or pay per call."
-                      : "No registered wallet trials left. Run minia2a_register, then call again with privateKey to use the wallet's own 5 trials.",
+                      : "No signed-wallet trials. Pass privateKey to sign this wallet for its 5 free trial calls (no registration), or pay per call.",
                 },
                 null,
                 2

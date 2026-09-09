@@ -28,8 +28,8 @@ Connects AI agents to the [minia2a.uk](https://minia2a.uk) marketplace — a liv
 
 ## Pricing
 
-- **Free trial**: 5 free trial calls per registered wallet
-- **Registration**: 5 free trial calls per registered wallet (self-custody wallet + EIP-191 signature)
+- **Free trial**: 5 free trial calls per signed wallet (no registration)
+- **Registration**: for publishing services (self-custody wallet + EIP-191 signature)
 - **Pay-per-call**: Services charge per invocation via x402 (HTTP 402 `accepts[]`)
 - **Platform fee**: 5% on paid calls
 

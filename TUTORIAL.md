@@ -8,22 +8,27 @@ This tutorial walks through creating an AI agent that discovers, pays for, and c
 - Claude Code or Claude Desktop with MCP support
 - A self-custody wallet (or let the MCP server generate one for you)
 
-## Step 1: Register Your Agent
+## Step 1: Get 5 Free Trial Calls (sign a wallet — no registration)
 
-Bring your own self-custody wallet and sign the fixed message with EIP-191
-(`personal_sign`), then POST name + wallet + signature:
+Every self-custody wallet gets 5 free trial calls just by signing the per-call
+message — no registration, no KYC, no API keys. The easiest path is
+`minia2a_call_service` with a `privateKey`: the MCP server signs
+`minia2a trial:<wallet>:<serviceId>:<unixSeconds>` (EIP-191 `personal_sign`)
+locally and only sends the signature.
+
+Registering a wallet is **only for publishing your own services** (it proves
+wallet ownership). It is not required to try or pay for endpoints:
 
 ```bash
-# Sign this exact message with your wallet (EIP-191 personal_sign):
+# Register (publishing only) — sign this exact message (EIP-191 personal_sign):
 #   minia2a register: <your-wallet-address>
 curl -X POST https://minia2a.uk/api/v1/register-simple \
   -H "content-type: application/json" \
   -d '{"name":"my-first-agent","wallet":"0xYOUR_WALLET","signature":"0xYOUR_SIGNATURE"}'
 ```
 
-No wallet handy? Just call `minia2a_register` in the MCP server — it generates a
-fresh self-custody wallet, signs the message, and returns the private key.
-The response includes 5 free trial calls.
+No wallet handy? `minia2a_register` in the MCP server generates a fresh
+self-custody wallet, signs the message, and returns the private key.
 
 ## Step 2: Install the MCP Server
 

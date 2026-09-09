@@ -109,7 +109,7 @@
     },
     {
       "name": "minia2a_call_service",
-      "description": "Call an x402 service on minia2a.uk with a registered wallet (5 free trial calls) or the paid 402 path. Handles the HTTP 402 payment flow.",
+      "description": "Call an x402 service on minia2a.uk with a signed wallet (5 free trial calls, no registration) or the paid 402 path. Handles the HTTP 402 payment flow.",
       "inputSchema": {
         "type": "object",
         "properties": {

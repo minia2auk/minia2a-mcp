@@ -7,7 +7,7 @@ description: |
   Discover and call 1,600+ pay-per-call services (AI inference, crypto data,
   web scraping, CAPTCHA solving) with automatic USDC settlement on 8 chains.
   Claude Code auto-mode ready with HTTP 402 machine-readable payment headers.
-  5 free trial calls per registered wallet.
+  5 free trial calls per signed wallet (no registration).
 
 repository: https://github.com/minia2a/minia2a-mcp
 homepage: https://minia2a.uk
@@ -72,8 +72,8 @@ tools:
 
   - name: minia2a_call_service
     description: |
-      Call any x402 service by name or ID with a registered wallet (5 free
-      trial calls) or anonymously (trial). Handles the HTTP 402 payment flow.
+      Call any x402 service by name or ID with a signed wallet (5 free
+      trial calls, no registration) or anonymously (paid 402). Handles the HTTP 402 payment flow.
     readOnly: false
     destructive: true
 
