@@ -8,6 +8,10 @@ import { createRequire } from "node:module";
 import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm";
 import { privateKeyToAccount } from "viem/accounts";
+import { randomUUID } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 // Read version from package.json at runtime so the banner + handshake never drift
 // from the published version (this has gone stale three times before).
@@ -52,6 +56,30 @@ interface StatsResponse {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+// Every request carries X-Agent-ID so the gateway can count real adopting agents.
+// The server stores only HMAC-SHA256(secret, id) — the raw id never lands in the DB.
+// Identity is per-machine (env → ~/.minia2a-agent-id → generated once), not per-process:
+// a per-process id would count every restart as a brand-new agent and inflate the metric.
+let _agentId: string | undefined;
+function agentId(): string {
+  if (_agentId) return _agentId;
+  if (process.env.MINIA2A_AGENT_ID) return (_agentId = process.env.MINIA2A_AGENT_ID);
+  const file = join(homedir(), ".minia2a-agent-id");
+  try {
+    const existing = readFileSync(file, "utf8").trim();
+    if (existing) return (_agentId = existing);
+  } catch {
+    // no file yet — fall through and create one
+  }
+  _agentId = "agent:" + randomUUID();
+  try {
+    writeFileSync(file, _agentId);
+  } catch {
+    // read-only home: keep the in-memory id, just don't persist it
+  }
+  return _agentId;
+}
+
 let servicesCache: { data: Service[]; ts: number } | null = null;
 const CACHE_TTL = 300_000; // 5 minutes
 
@@ -59,7 +87,9 @@ async function fetchServices(): Promise<Service[]> {
   if (servicesCache && Date.now() - servicesCache.ts < CACHE_TTL) {
     return servicesCache.data;
   }
-  const res = await fetch(`${MINIA2A_API}/services`);
+  const res = await fetch(`${MINIA2A_API}/services`, {
+    headers: { "X-Agent-ID": agentId() },
+  });
   if (!res.ok) throw new Error(`minia2a API returned ${res.status}`);
   const json = await res.json();
   const data = (json.services || json) as Service[];
@@ -68,7 +98,9 @@ async function fetchServices(): Promise<Service[]> {
 }
 
 async function fetchStats(): Promise<StatsResponse> {
-  const res = await fetch(`${MINIA2A_API}/stats`);
+  const res = await fetch(`${MINIA2A_API}/stats`, {
+    headers: { "X-Agent-ID": agentId() },
+  });
   if (!res.ok) throw new Error(`minia2a API returned ${res.status}`);
   const json = await res.json();
   return {
@@ -116,7 +148,7 @@ async function registerAgent(name: string, wallet?: string, signature?: string) 
 
   const res = await fetch(`${MINIA2A_API}/v1/register-simple`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Agent-ID": agentId() },
     body: JSON.stringify({ name, wallet: address, signature: sig }),
   });
   const data = await res.json();
@@ -502,6 +534,7 @@ server.tool(
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "User-Agent": `minia2a-mcp/${VERSION}`,
+      "X-Agent-ID": agentId(),
     };
 
     // Wallet trials need a signature, not just the query param. The signed message is
@@ -682,7 +715,7 @@ server.tool(
     // 1. HTTP reachability
     try {
       const probeResp = await fetch(`${url}?probe=1`, {
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "X-Agent-ID": agentId() },
       });
       const httpOk = probeResp.ok || probeResp.status === 402;
       checks.push({
