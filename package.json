@@ -1,6 +1,6 @@
 {
   "name": "minia2a-mcp",
-  "version": "1.1.31",
+  "version": "1.1.32",
   "description": "MCP server for minia2a.uk \u2014 auto-mode ready x402 micropayment marketplace. Discover and call 1,600+ agent-to-agent services with built-in USDC payments, 5 free trial calls per signed wallet (self-custody wallet + EIP-191 signature, no registration), and .agent-budget support. Claude Code auto-mode ready Aug 14.",
   "mcpName": "uk.minia2a/minia2a-mcp",
   "type": "module",

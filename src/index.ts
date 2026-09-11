@@ -56,7 +56,9 @@ interface StatsResponse {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-// Every request carries X-Agent-ID so the gateway can count real adopting agents.
+// Requests to minia2a's own endpoints carry X-Agent-ID so the gateway can count
+// real adopting agents. Not sent on the x402-validate probes, which hit
+// caller-supplied URLs — our identity has no business going to third parties.
 // The server stores only HMAC-SHA256(secret, id) — the raw id never lands in the DB.
 // Identity is per-machine (env → ~/.minia2a-agent-id → generated once), not per-process:
 // a per-process id would count every restart as a brand-new agent and inflate the metric.
@@ -715,7 +717,9 @@ server.tool(
     // 1. HTTP reachability
     try {
       const probeResp = await fetch(`${url}?probe=1`, {
-        headers: { Accept: "application/json", "X-Agent-ID": agentId() },
+        // No X-Agent-ID here: url is caller-supplied, so this probe can hit any
+        // third-party origin. Our identity is only for minia2a's own endpoints.
+        headers: { Accept: "application/json" },
       });
       const httpOk = probeResp.ok || probeResp.status === 402;
       checks.push({
