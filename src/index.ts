@@ -696,10 +696,64 @@ server.tool(
 );
 
 // ── Tool: check_endpoint ──────────────────────────────────────────────
+//
+// 2026-09-18 — this checker used to ask only for the legacy
+// `x-402-amount/chain/token/recipient` response headers. The platform moved to
+// the canonical x402 v2 challenge: a `PAYMENT-REQUIRED` header carrying
+// base64(JSON) whose `accepts[]` array holds amount/asset/network/payTo (the
+// same JSON is the response body). So the scorer was reading a vocabulary the
+// endpoints no longer speak, and every minia2a endpoint came back 11/100
+// "NOT READY" against our own validator -- with the four payment signals
+// alone worth 45 of 115, no endpoint could reach the 80 threshold no matter
+// how correct it was.
+//
+// Both forms are now accepted, and each check's `detail` says WHICH form it
+// found. That distinction is the point: "endpoint carries no payment info" and
+// "endpoint speaks a form this tool did not recognise" are different findings
+// with different fixes, and the old output could not tell them apart.
+
+type X402Accept = {
+  amount?: string;
+  asset?: string;
+  network?: string;
+  payTo?: string;
+  scheme?: string;
+};
+
+type X402Challenge = {
+  accepts?: X402Accept[];
+  trialExhausted?: boolean;
+  nextSteps?: string[];
+  message?: string;
+};
+
+/** Read the payment challenge from either the canonical header or the body. */
+function readChallenge(
+  resp: Response,
+  body: any
+): { from: string; challenge: X402Challenge | null } {
+  const hdr = resp.headers.get("payment-required");
+  if (hdr) {
+    try {
+      const decoded = JSON.parse(Buffer.from(hdr, "base64").toString("utf8"));
+      if (decoded && Array.isArray(decoded.accepts)) {
+        return { from: "PAYMENT-REQUIRED header", challenge: decoded };
+      }
+    } catch {
+      // Present but not decodable JSON. Fall through and try the body rather
+      // than reporting "no payment info" -- the header exists, we just could
+      // not read it, and saying so is the honest report.
+    }
+  }
+  if (body && Array.isArray(body.accepts)) {
+    return { from: "body.accepts", challenge: body };
+  }
+  return { from: "", challenge: null };
+}
 
 server.tool(
   "minia2a_check_endpoint",
-  "Validate any x402 endpoint for Claude Code auto-mode readiness (Aug 14, 2026). Checks 9 signals: HTTP reachability, JSON content-type, 4 payment headers (x-402-amount/chain/token/recipient), trial info, registration path, and /api/agent-ready handshake. Returns a score (0-100%) with per-check PASS/FAIL detail. Use this before calling a paid endpoint to verify it works with autonomous agents.",
+  "Validate any x402 endpoint for autonomous-agent (Claude Code auto-mode) readiness. Checks 9 signals: HTTP reachability, JSON content-type, payment challenge (canonical PAYMENT-REQUIRED header or legacy x-402-* headers), payment amount, network, recipient, trial info, registration path, and /api/agent-ready handshake. Returns a score (0-100%) with per-check PASS/FAIL detail. Use this before calling a paid endpoint to verify it works with autonomous agents.",
   {
     endpointUrl: z
       .string()
@@ -707,123 +761,205 @@ server.tool(
   },
   { readOnlyHint: true },
   async ({ endpointUrl }) => {
-    const checks: { signal: string; weight: number; pass: boolean | null; detail: string }[] = [];
-    let earnedWeight = 0;
-    const totalWeight = 115;
+    const checks: {
+      signal: string;
+      weight: number;
+      credited: number;
+      pass: boolean | null;
+      detail: string;
+    }[] = [];
+    // A signal can be partly credited (a 402 endpoint is reachable and speaking
+    // x402, but is not answering the call -- half the reachability weight).
+    // `credited` is recorded per signal rather than accumulated in a separate
+    // total, so the printed report adds up to the printed score. It previously
+    // did not: HTTP 200/402 printed PASS at weight 15 while only 7.5 was
+    // counted, and the old denominator (115) did not match its own signal list
+    // (110) either. Both were silent -- the output looked self-consistent and
+    // was not.
+    const totalWeight = () => checks.reduce((s, c) => s + c.weight, 0);
+    const earnedWeight = () => checks.reduce((s, c) => s + c.credited, 0);
+    const push = (
+      signal: string,
+      weight: number,
+      pass: boolean | null,
+      detail: string,
+      credited?: number
+    ) => checks.push({ signal, weight, credited: credited ?? (pass === true ? weight : 0), pass, detail });
 
     const url = endpointUrl.replace(/\/$/, "");
     const origin = new URL(url).origin;
 
     // 1. HTTP reachability
     try {
-      const probeResp = await fetch(`${url}?probe=1`, {
-        // No X-Agent-ID here: url is caller-supplied, so this probe can hit any
-        // third-party origin. Our identity is only for minia2a's own endpoints.
-        headers: { Accept: "application/json" },
+      const probeResp = await fetch(url, {
+        // Self-identify with the header, NOT `?probe=1`.
+        //
+        // minia2a treats `probe=1` as "this caller does not need the guidance
+        // payload" and answers with a reduced body: `message`, `nextSteps` and
+        // `trialExhausted` are dropped. That is exactly the material the trial
+        // and registration signals below grade, so probing that way made both
+        // checks fail on every real endpoint no matter how correct it was --
+        // the tool was measuring a variant of the resource it had asked for.
+        // The header form still marks this call as a probe for the platform's
+        // own stats, while the response stays the one a real agent receives.
+        //
+        // No X-Agent-ID: url is caller-supplied, so this can hit any third-party
+        // origin. Our identity is only for minia2a's own endpoints.
+        headers: { Accept: "application/json", "X-x402-Probe": "1" },
       });
       const httpOk = probeResp.ok || probeResp.status === 402;
-      checks.push({
-        signal: "HTTP 200/402",
-        weight: 15,
-        pass: httpOk,
-        detail: `HTTP ${probeResp.status}${probeResp.ok ? " OK" : " (payment required or error)"}`,
-      });
-      if (httpOk) earnedWeight += probeResp.ok ? 15 : 7.5;
+      push(
+        "HTTP 200/402",
+        15,
+        httpOk,
+        `HTTP ${probeResp.status}${probeResp.ok ? " OK" : " (reachable, payment required)"}` +
+          (httpOk && !probeResp.ok ? " — half credit: reachable and speaking x402, but not answering the call" : ""),
+        httpOk ? (probeResp.ok ? 15 : 7.5) : 0
+      );
 
       // 2. JSON Content-Type
       const ct = probeResp.headers.get("content-type") || "";
       const isJson = ct.includes("json");
-      checks.push({
-        signal: "JSON Content-Type",
-        weight: 5,
-        pass: isJson,
-        detail: ct || "no content-type header",
-      });
-      if (isJson) earnedWeight += 5;
+      push("JSON Content-Type", 5, isJson, ct || "no content-type header");
 
-      // 3–6. Payment headers
-      for (const [signal, hdr, w] of [
-        ["x-402-amount", "x-402-amount", 15],
-        ["x-402-chain", "x-402-chain", 10],
-        ["x-402-token", "x-402-token", 10],
-        ["x-402-recipient", "x-402-recipient", 10],
-      ] as const) {
-        const val = probeResp.headers.get(hdr);
-        checks.push({
-          signal,
-          weight: w,
-          pass: !!val,
-          detail: val || "header missing",
-        });
-        if (val) earnedWeight += w;
-      }
-
-      // 7. Trial info
+      // Body is needed by the payment, trial and registration signals below.
+      // Parse it once; on failure those signals are recorded as UNKNOWN rather
+      // than FAIL, so an endpoint that answers 402 with a non-JSON body is not
+      // silently reported as "carries no payment information".
+      let body: any = null;
+      let bodyErr = "";
       if (isJson) {
         try {
-          const body = await probeResp.clone().json();
-          const trial = (body as any)._trial || (body as any).trial || {};
-          const hasTrial = trial.remaining !== undefined || trial.limit !== undefined;
-          checks.push({
-            signal: "Trial info (_trial)",
-            weight: 15,
-            pass: hasTrial,
-            detail: hasTrial
-              ? `remaining: ${trial.remaining}/${trial.limit}${trial.reset ? ", reset: " + trial.reset : ""}`
-              : "No _trial in body",
-          });
-          if (hasTrial) earnedWeight += 15;
-
-          // 8. Registration path
-          const regPath =
-            (body as any).register ||
-            (body as any).registrationUrl ||
-            ((body as any)._trial && (body as any)._trial.register) ||
-            "";
-          const regHdr = probeResp.headers.get("x-402-register");
-          const hasReg = !!regPath || !!regHdr;
-          checks.push({
-            signal: "Registration path",
-            weight: 15,
-            pass: hasReg,
-            detail: regPath
-              ? JSON.stringify(regPath).slice(0, 100)
-              : regHdr
-              ? `header: ${regHdr}`
-              : "No registration info",
-          });
-          if (hasReg) earnedWeight += 15;
-        } catch {
-          checks.push({
-            signal: "Trial info (_trial)",
-            weight: 15,
-            pass: false,
-            detail: "Body is not valid JSON",
-          });
-          checks.push({
-            signal: "Registration path",
-            weight: 15,
-            pass: false,
-            detail: "Cannot parse body",
-          });
+          body = await probeResp.clone().json();
+        } catch (e) {
+          bodyErr = e instanceof Error ? e.message : "unparseable";
         }
+      } else {
+        bodyErr = "content-type is not JSON";
+      }
+
+      // 3–6. Payment challenge. Canonical form comes from the
+      // PAYMENT-REQUIRED header (or the identical body); legacy x-402-*
+      // headers are accepted so endpoints built to the older convention are
+      // measured on what they do carry, not on which vintage they are.
+      const legacyAmount = probeResp.headers.get("x-402-amount");
+      const legacyChain = probeResp.headers.get("x-402-chain");
+      const legacyPayTo = probeResp.headers.get("x-402-recipient");
+      const { from, challenge } = readChallenge(probeResp, body);
+      const acc: X402Accept = (challenge?.accepts && challenge.accepts[0]) || {};
+
+      const hasChallenge =
+        probeResp.status === 402 && (!!acc.amount || !!acc.network || !!legacyAmount);
+      push(
+        "Payment challenge",
+        15,
+        hasChallenge,
+        hasChallenge
+          ? `HTTP 402, challenge from ${from || "x-402-* headers"}`
+          : probeResp.status === 402
+          ? "HTTP 402 but no readable accepts[]/x-402-* payment info"
+          : `HTTP ${probeResp.status} — no payment challenge to read`
+      );
+
+      const rawAmount = acc.amount ?? legacyAmount ?? "";
+      const amountOk = /^\d+$/.test(String(rawAmount));
+      push(
+        "Payment amount",
+        10,
+        amountOk,
+        amountOk
+          ? `${rawAmount} (raw units${acc.asset ? `, asset ${acc.asset}` : ""})`
+          : rawAmount
+          ? `present but not an integer string: ${rawAmount}`
+          : "no amount in challenge"
+      );
+
+      // The two vocabularies name a chain differently and are judged
+      // accordingly: the canonical `accepts[].network` is a CAIP-2 id
+      // (eip155:8453), while the legacy x-402-chain header carries a bare name
+      // ("base"). Requiring CAIP-2 of both scored legacy endpoints down for
+      // using a form that is merely older, not wrong.
+      const net = acc.network ?? legacyChain ?? "";
+      const netOk = acc.network
+        ? /^[a-z0-9-]+:[A-Za-z0-9]+$/.test(String(net))
+        : /^[a-z][a-z0-9-]{1,24}$/.test(String(net));
+      push(
+        "Payment network",
+        10,
+        netOk,
+        netOk
+          ? `${net}${acc.network ? " (CAIP-2)" : " (legacy chain name)"}`
+          : net
+          ? `unrecognised network id: ${net}`
+          : "no network in challenge"
+      );
+
+      const payTo = acc.payTo ?? legacyPayTo ?? "";
+      const payToOk = typeof payTo === "string" && payTo.length >= 16;
+      push(
+        "Payment recipient",
+        10,
+        payToOk,
+        payToOk ? String(payTo) : payTo ? `too short to be an address: ${payTo}` : "no payTo in challenge"
+      );
+
+      // 7. Trial info. Accepts the shape the platform actually emits
+      // (`trialExhausted` boolean plus nextSteps/message describing the trial)
+      // as well as the older `_trial: {remaining, limit}` block.
+      if (body !== null) {
+        const trial = body._trial || body.trial || {};
+        const counted = trial.remaining !== undefined || trial.limit !== undefined;
+        const declared =
+          typeof body.trialExhausted === "boolean" ||
+          /\btrial\b/i.test(
+            [...(Array.isArray(body.nextSteps) ? body.nextSteps : []), body.message || ""].join(" ")
+          );
+        const hasTrial = counted || declared;
+        push(
+          "Trial info",
+          15,
+          hasTrial,
+          counted
+            ? `remaining: ${trial.remaining}/${trial.limit}${trial.reset ? ", reset: " + trial.reset : ""}`
+            : declared
+            ? `declared in body (trialExhausted=${body.trialExhausted})`
+            : "body does not describe a trial"
+        );
+
+        // 8. Registration path. A self-serve route counts: the platform's
+        // nextSteps spell out "attach ?wallet=... with X-Wallet-Signature",
+        // which is a registration path that needs no account.
+        const regPath = body.register || body.registrationUrl || (body._trial && body._trial.register) || "";
+        const regHdr = probeResp.headers.get("x-402-register");
+        const steps = Array.isArray(body.nextSteps) ? body.nextSteps.join(" ") : "";
+        const selfServe = /wallet/i.test(steps) && /(trial|sign|signature)/i.test(steps);
+        const hasReg = !!regPath || !!regHdr || selfServe;
+        push(
+          "Registration path",
+          15,
+          hasReg,
+          regPath
+            ? JSON.stringify(regPath).slice(0, 100)
+            : regHdr
+            ? `header: ${regHdr}`
+            : selfServe
+            ? "self-serve path described in nextSteps (attach wallet + signature, no account)"
+            : "no registration or self-serve wallet path"
+        );
+      } else {
+        push("Trial info", 15, null, `cannot read body: ${bodyErr}`);
+        push("Registration path", 15, null, `cannot read body: ${bodyErr}`);
       }
     } catch (e) {
-      checks.push(
-        {
-          signal: "HTTP 200/402",
-          weight: 15,
-          pass: false,
-          detail: `Unreachable: ${e instanceof Error ? e.message : "network error"}`,
-        },
-        { signal: "JSON Content-Type", weight: 5, pass: false, detail: "Endpoint unreachable" },
-        { signal: "x-402-amount", weight: 15, pass: false, detail: "Endpoint unreachable" },
-        { signal: "x-402-chain", weight: 10, pass: false, detail: "Endpoint unreachable" },
-        { signal: "x-402-token", weight: 10, pass: false, detail: "Endpoint unreachable" },
-        { signal: "x-402-recipient", weight: 10, pass: false, detail: "Endpoint unreachable" },
-        { signal: "Trial info (_trial)", weight: 15, pass: false, detail: "Endpoint unreachable" },
-        { signal: "Registration path", weight: 15, pass: false, detail: "Endpoint unreachable" }
-      );
+      const why = `Unreachable: ${e instanceof Error ? e.message : "network error"}`;
+      push("HTTP 200/402", 15, false, why);
+      push("JSON Content-Type", 5, false, "Endpoint unreachable");
+      push("Payment challenge", 15, false, "Endpoint unreachable");
+      push("Payment amount", 10, false, "Endpoint unreachable");
+      push("Payment network", 10, false, "Endpoint unreachable");
+      push("Payment recipient", 10, false, "Endpoint unreachable");
+      push("Trial info", 15, false, "Endpoint unreachable");
+      push("Registration path", 15, false, "Endpoint unreachable");
     }
 
     // 9. Agent-ready endpoint
@@ -833,35 +969,41 @@ server.tool(
       });
       if (arResp.ok) {
         const arBody: any = await arResp.json();
-        const hasPayment =
-          arBody.payment && arBody.payment.chain && arBody.payment.token;
-        const hasReg =
+        // Two accepted shapes: the original nested
+        // {payment:{chain,token}, registration:{endpoint}} block, and the shape
+        // the platform actually serves -- flat readiness fields. Requiring only
+        // the nested one made this signal fail on every real minia2a origin.
+        const nested =
+          arBody.payment && arBody.payment.chain && arBody.payment.token &&
           arBody.registration && arBody.registration.endpoint;
-        checks.push({
-          signal: "Agent-Ready endpoint",
-          weight: 15,
-          pass: hasPayment && hasReg,
-          detail: `status:${arBody.status}, payment:${arBody.payment?.chain || "?"}/${arBody.payment?.token || "?"}`,
-        });
-        if (hasPayment && hasReg) earnedWeight += 15;
+        const flat =
+          typeof arBody.status === "string" &&
+          (arBody.services !== undefined ||
+            arBody.paymentRoutes !== undefined ||
+            arBody.facilitator !== undefined ||
+            arBody.onchain !== undefined);
+        const ready = !!(nested || flat);
+        push(
+          "Agent-Ready endpoint",
+          15,
+          ready,
+          ready
+            ? flat
+              ? `status:${arBody.status}, services:${arBody.services ?? "?"}, paymentRoutes:${arBody.paymentRoutes ?? "?"}`
+              : `status:${arBody.status}, payment:${arBody.payment?.chain}/${arBody.payment?.token}`
+            : `HTTP 200 but no recognisable readiness fields: ${Object.keys(arBody).slice(0, 8).join(",")}`
+        );
       } else {
-        checks.push({
-          signal: "Agent-Ready endpoint",
-          weight: 15,
-          pass: false,
-          detail: `HTTP ${arResp.status} — /api/agent-ready not found`,
-        });
+        push("Agent-Ready endpoint", 15, false, `HTTP ${arResp.status} — /api/agent-ready not found`);
       }
     } catch {
-      checks.push({
-        signal: "Agent-Ready endpoint",
-        weight: 15,
-        pass: false,
-        detail: "unreachable or not JSON",
-      });
+      push("Agent-Ready endpoint", 15, false, "unreachable or not JSON");
     }
 
-    const score = Math.round((earnedWeight / totalWeight) * 100);
+    const tw = totalWeight();
+    const score = tw > 0 ? Math.round((earnedWeight() / tw) * 100) : 0;
+    const failed = checks.filter((c) => c.pass === false).map((c) => c.signal);
+    const unknown = checks.filter((c) => c.pass === null).map((c) => c.signal);
     return {
       content: [
         {
@@ -880,20 +1022,25 @@ server.tool(
                 score >= 80
                   ? "This endpoint has the signals auto-mode agents need to pay autonomously."
                   : score >= 50
-                  ? "Add missing 402 headers + registration info before Aug 14."
-                  : "Endpoint needs payment headers, trial info, and registration path.",
-              autoModeDeadline: "Aug 14, 2026 (3 days)",
+                  ? `Partly there — failing: ${failed.join(", ") || "none"}.`
+                  : `Failing: ${failed.join(", ") || "none"}.`,
+              // No deadline is asserted here. The previous build hardcoded
+              // "Aug 14, 2026 (3 days)", which kept reporting three days
+              // remaining long after the date had passed.
+              scoring: `${earnedWeight()} of ${tw} points (score = round(credited / weight * 100))`,
               checks: checks.map((c) => ({
                 signal: c.signal,
                 weight: c.weight,
+                credited: c.credited,
                 result: c.pass === true ? "PASS" : c.pass === false ? "FAIL" : "UNKNOWN",
                 detail: c.detail,
               })),
+              unknownSignals: unknown,
               nextSteps: [
-                "1. Add x-402-amount, x-402-chain, x-402-token, x-402-recipient headers to 402 responses",
-                "2. Include _trial: {remaining, limit, reset} in JSON body",
-                "3. Add x-402-register header or register field in body",
-                "4. Create GET /api/agent-ready returning JSON with payment + registration",
+                "1. Answer HTTP 402 with a payment challenge. Canonical form: a PAYMENT-REQUIRED header carrying base64(JSON) whose accepts[] array has amount (raw units, integer string), asset, network (e.g. eip155:8453) and payTo. The legacy x-402-amount/chain/token/recipient headers are still accepted.",
+                "2. Describe the trial in the body: _trial:{remaining, limit, reset}, or a trialExhausted boolean plus nextSteps/message.",
+                "3. State how a caller gets access: a register/registrationUrl field, an x-402-register header, or nextSteps that spell out the self-serve wallet+signature path.",
+                "4. Serve GET /api/agent-ready returning JSON with a status string plus services/paymentRoutes/facilitator/onchain, or a payment{chain,token} + registration{endpoint} block.",
                 "Full guide: https://minia2a.uk/auto-mode-validator.html",
               ],
             },
