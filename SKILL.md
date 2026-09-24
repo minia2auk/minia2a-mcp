@@ -1,6 +1,6 @@
 ---
 name: minia2a-mcp
-description: Discover, trial, and pay for 1,600+ x402-payable APIs on the minia2a marketplace. Built-in USDC micropayments (Base + Algorand + 6 more). No API keys required.
+description: Discover, trial, and pay for 1,600+ x402-payable APIs on the minia2a marketplace. Built-in USDC micropayments (Base, via the PayAI or Circle facilitator). No API keys required.
 metadata:
   type: marketplace
   tags: [x402, mcp, agent-payments, micropayments, usdc, api-discovery]

@@ -663,7 +663,7 @@ server.tool(
                   trialMode === "wallet"
                     ? `Wallet trial used for ${trialSigner}${trialRemaining ? ` — ${trialRemaining} left` : ""}`
                     : trialMode === "ip"
-                      ? "Registered wallet trial used."
+                      ? "Anonymous (IP-keyed) trial used."
                       : "Served without a reported trial bucket.",
               },
               null,
