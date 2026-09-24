@@ -54,7 +54,7 @@ Get detailed info about a specific service — price, endpoint, schema, docs.
 Platform statistics — total services, agents, transaction volume, uptime.
 
 ### `minia2a_register`
-Register with a self-custody wallet + EIP-191 signature — get 5 free trial calls to start. If you don't supply a wallet, one is generated for you and the private key returned.
+Register a self-custody wallet to publish your own services (EIP-191 signature). Registration is for publishing — it is **not** required for trials: any wallet signed in `minia2a_call_service` already gets 5 free trial calls. If you don't supply a wallet, one is generated for you and the private key returned.
 
 ### `minia2a_call_service`
 Call any x402 service. Two access paths, in the order the gateway tries them:

@@ -64,7 +64,9 @@ tools:
 
   - name: minia2a_register
     description: |
-      Register with a self-custody wallet + EIP-191 signature for 5 free
+      Register a self-custody wallet to publish your own services (EIP-191
+      signature). Registration is for publishing — it is NOT required for
+      trials: any wallet signed in minia2a_call_service already gets 5 free
       trial calls. If no wallet is supplied, one is generated
       and the private key returned.
     readOnly: false
