@@ -87,7 +87,11 @@ function agentId(): string {
   const file = candidates[0];
   _agentId = "agent:" + randomUUID();
   try {
-    writeFileSync(file, _agentId);
+    // 0600 to match the other published clients (minia2a, minia2a-cli,
+    // minia2a-skill, @minia2a/sdk). Without the option this lands at 0644 under
+    // a default umask, which is one value the audit that produced this line
+    // never compared across packages.
+    writeFileSync(file, _agentId, { mode: 0o600 });
   } catch {
     // read-only home: keep the in-memory id, just don't persist it
   }
