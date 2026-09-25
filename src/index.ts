@@ -60,19 +60,31 @@ interface StatsResponse {
 // real adopting agents. Not sent on the x402-validate probes, which hit
 // caller-supplied URLs — our identity has no business going to third parties.
 // The server stores only HMAC-SHA256(secret, id) — the raw id never lands in the DB.
-// Identity is per-machine (env → ~/.minia2a-agent-id → generated once), not per-process:
+// Identity is per-machine (env → id file → generated once), not per-process:
 // a per-process id would count every restart as a brand-new agent and inflate the metric.
+//
+// Two id locations exist across our published clients: this one, `minia2a-client`
+// and `@minia2a/sdk` read ~/.minia2a-agent-id (the path adoption.go names), while
+// `minia2a-cli` historically wrote ~/.minia2a/agent-id. Reading only one mints a
+// second id on a machine that already has one, and that machine is counted as
+// two agents. Read both, in that order.
 let _agentId: string | undefined;
 function agentId(): string {
   if (_agentId) return _agentId;
   if (process.env.MINIA2A_AGENT_ID) return (_agentId = process.env.MINIA2A_AGENT_ID);
-  const file = join(homedir(), ".minia2a-agent-id");
-  try {
-    const existing = readFileSync(file, "utf8").trim();
-    if (existing) return (_agentId = existing);
-  } catch {
-    // no file yet — fall through and create one
+  const candidates = [
+    join(homedir(), ".minia2a-agent-id"),
+    join(homedir(), ".minia2a", "agent-id"),
+  ];
+  for (const file of candidates) {
+    try {
+      const existing = readFileSync(file, "utf8").trim();
+      if (existing) return (_agentId = existing);
+    } catch {
+      // not created yet — fall through to the next candidate
+    }
   }
+  const file = candidates[0];
   _agentId = "agent:" + randomUUID();
   try {
     writeFileSync(file, _agentId);
