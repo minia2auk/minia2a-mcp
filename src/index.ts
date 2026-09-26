@@ -491,33 +491,59 @@ server.tool(
 
 // ── Tool: call_service ───────────────────────────────────────────────
 
-server.tool(
+// Strict input schema (2026-09-26, creator report).
+//
+// This tool used to register a raw shape, which the SDK wraps in `z.object(shape)`.
+// Zod's default for an object is STRIP: unknown top-level keys are deleted before
+// the handler runs and nothing is said. `params` has a default of `{}`, so the
+// failure mode was silent and complete -- an agent that flattens the service
+// parameters onto the top level, which is the shape an LLM reaches for first:
+//
+//     { "serviceId": "x402-json-validate", "json": "{...}", "schema": "{...}" }
+//
+// sent an empty `params` and got back the SERVICE's own "json required". The
+// caller is told the wrong thing is wrong, by the wrong party, with no hint that
+// the arguments never left the tool. Measured: the creator hit this on five of
+// eight services while auditing the platform.
+//
+// `.strict()` turns that into a named tool error before the request is built.
+// `list_services` and `get_service` are already `additionalProperties:false`; the
+// only loose schema in the package was the only one that spends money. Switching
+// from `server.tool` to `server.registerTool` is what makes `.strict()` reachable
+// -- `tool()` takes a raw shape and only a raw shape, so the modifier has nowhere
+// to attach.
+server.registerTool(
   "minia2a_call_service",
-  "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (sign a wallet for 5 free trial calls — no registration); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Set autoPay:true together with privateKey to have a 402 paid automatically in USDC on Base and the call retried — the wallet must hold USDC or the call still returns payment_required (never charges silently). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does.",
   {
-    serviceId: z
-      .string()
-      .describe("The service ID (e.g., 'x402-gas') or full endpoint path"),
-    params: z
-      .record(z.string(), z.unknown())
-      .optional()
-      .default({})
-      .describe("JSON parameters to send to the service"),
-    wallet: z
-      .string()
-      .optional()
-      .describe("Your self-custody wallet address (0x...). Without privateKey this alone does not draw on the wallet's trial bucket."),
-    privateKey: z
-      .string()
-      .optional()
-      .describe("Private key of your wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."),
-    autoPay: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("When true and a privateKey is available, a 402 Payment Required response is paid automatically in USDC on Base via x402 and the call retried. Default false — you get a payment_required response instead of any automatic charge. Empty wallet (no USDC) still returns payment_required."),
+    description:
+      "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (sign a wallet for 5 free trial calls — no registration); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Set autoPay:true together with privateKey to have a 402 paid automatically in USDC on Base and the call retried — the wallet must hold USDC or the call still returns payment_required (never charges silently). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does. Service parameters go INSIDE `params`; a top-level key that is not one of the five declared names is rejected by name rather than dropped.",
+    inputSchema: z
+      .object({
+        serviceId: z
+          .string()
+          .describe("The service ID (e.g., 'x402-gas') or full endpoint path"),
+        params: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .default({})
+          .describe("JSON parameters to send to the service. These are the service's OWN parameter names (e.g. {\"ext\":\"json\"} for x402-mime-type), nested here — not flattened onto the top level."),
+        wallet: z
+          .string()
+          .optional()
+          .describe("Your self-custody wallet address (0x...). Without privateKey this alone does not draw on the wallet's trial bucket."),
+        privateKey: z
+          .string()
+          .optional()
+          .describe("Private key of your wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."),
+        autoPay: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe("When true and a privateKey is available, a 402 Payment Required response is paid automatically in USDC on Base via x402 and the call retried. Default false — you get a payment_required response instead of any automatic charge. Empty wallet (no USDC) still returns payment_required."),
+      })
+      .strict(),
+    annotations: { destructiveHint: true },
   },
-  { destructiveHint: true },
   async ({ serviceId, params, wallet, privateKey, autoPay }) => {
     const services = await fetchServices();
     const want = serviceId.toLowerCase();
