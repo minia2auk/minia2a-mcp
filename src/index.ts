@@ -200,6 +200,13 @@ const server = new McpServer({
   version: VERSION,
 });
 
+// Catalog search folds `-` and `_` to a space on both sides before matching. The id is
+// the string an agent most likely holds — it is in every result and every endpoint URL —
+// and it is the one field the filter used to ignore. The gateway answers q=crypto-price
+// with rows while this filter returned none: "crypto-price" is not a substring of
+// "Crypto Price", and "x402-crypto-price" was never in the match surface at all.
+const foldSearch = (s: string) => s.toLowerCase().replace(/[-_]+/g, " ").trim();
+
 // ── Tool: list_services ──────────────────────────────────────────────
 
 server.tool(
@@ -213,7 +220,7 @@ server.tool(
     search: z
       .string()
       .optional()
-      .describe("Search term to filter services by name or description"),
+      .describe("Search term to filter services by id, name, or description. Hyphens and underscores are treated as spaces, so 'crypto-price' and 'crypto_price' both match."),
     limit: z
       .number()
       .optional()
@@ -234,11 +241,12 @@ server.tool(
     }
 
     if (search) {
-      const q = search.toLowerCase();
+      const q = foldSearch(search);
       services = services.filter(
         (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q)
+          foldSearch(s.id).includes(q) ||
+          foldSearch(s.name).includes(q) ||
+          foldSearch(s.description).includes(q)
       );
     }
 
@@ -623,8 +631,12 @@ server.tool(
                     "1. Get 5 free trial calls: call with privateKey to sign 'minia2a trial:<wallet>:<serviceId>:<ts>' (no registration).",
                     "2. Or pay per call: send USDC to the payTo address in accepts[0], then retry with a PAYMENT-SIGNATURE header (x402 V2).",
                   ],
+                  // This is the one moment the client asks an agent for money. It used to
+                  // also advertise the free path (minting another wallet for 5 more trials),
+                  // which invited the caller to walk away from the till. Removed. autoPay is
+                  // named explicitly, but its default stays false — no silent charges.
                   howToProceed: trialSigner
-                    ? `Signed as ${trialSigner}. A 402 here means this wallet's 5 trials are spent — pay via x402, or sign a fresh wallet (no registration needed) for 5 more trials.`
+                    ? `Signed as ${trialSigner}. A 402 here means this wallet's 5 trials are spent — pay per call via x402, or pass autoPay: true together with this privateKey to have the 402 paid in USDC on Base and the call retried.`
                     : wallet
                       ? "wallet= alone does not reach the wallet trial bucket. Pass privateKey (or set MINIA2A_PRIVATE_KEY) so the call can be signed, or pay per call."
                       : "No signed-wallet trials. Pass privateKey to sign this wallet for its 5 free trial calls (no registration), or pay per call.",
