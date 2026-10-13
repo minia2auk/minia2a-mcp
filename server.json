@@ -21,6 +21,12 @@
       }
     }
   ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://minia2a.uk/mcp"
+    }
+  ],
   "_meta": {
     "io.modelcontextprotocol.registry/publisher-provided": {
       "categories": [
