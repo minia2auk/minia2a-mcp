@@ -88,7 +88,7 @@ Claude Code auto mode is the default. Agents can now autonomously discover, tria
 - `/api/agent-ready` — machine-readable handshake with payment info, registration endpoint, and quickstart
 - 402 body: `accepts[]` array (`amount`/`asset`/`network`/`payTo`/`scheme`) — agent parses full payment instruction (x402 V2)
 - `.agent-budget` v1.1 — 7-field autonomous-purchasing controls (per-call / per-task / confirmation / dedupe / settlement / audit)
-- 5 free trial calls per signed wallet (no registration) — try any paid endpoint
+- 5 free trial calls per signed wallet (no registration) — spend them across the catalog. Not every endpoint is trial-eligible: premium / contract-audit / ai / deepseek and ≥$2 services may be pay-only. The endpoint's own 402 is the gate, not the category.
 
 ```json
 {

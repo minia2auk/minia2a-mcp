@@ -330,7 +330,7 @@ server.tool(
                 : "varies by service",
               category: service.category || "uncategorized",
               tags: service.tags || [],
-              how_to_call: `Call ${service.endpoint} with a signed wallet (privateKey) to use its 5 free trial calls — no registration needed. Or call anonymously to hit the paid 402 path. When trials run out you get HTTP 402 with an accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).`,
+              how_to_call: `Call ${service.endpoint} with a signed wallet (privateKey) to spend one of your wallet's 5 free trial calls — no registration needed. Or call anonymously to hit the paid 402 path. When trials run out you get HTTP 402 with an accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).`,
               documentation: `https://minia2a.uk/service/${service.id}`,
             },
             null,
@@ -438,7 +438,9 @@ server.tool(
                       }
                     : {}),
                   freeTrial:
-                    "5 free trial calls per signed wallet across all services (no registration needed).",
+                    "5 free trial calls per signed wallet (no registration needed). The allowance is " +
+                    "spendable across the catalog; pay-only endpoints (premium / contract-audit / " +
+                    "ai / deepseek, >=$2) still answer 402.",
                   next: "Use minia2a_call_service with privateKey=<your-key> to call services with your wallet's 5 free trial calls, then pay per call in USDC when they run out.",
                 },
                 null,
