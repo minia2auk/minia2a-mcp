@@ -76,6 +76,26 @@ const CHALLENGE = {
   ck("C8 missing nextSteps falls back to the pay steps", (p.nextSteps || []).join(" ").includes("accepts[0]"));
 }
 
+// ── anonymous challenge: trialExhausted:true is about the missing identity ─
+// handler_discovery.go:199 / handler_x402.go:897 / handler_mcp.go:214 set it
+// on every unsigned call. Echoing it told a first-time caller its allowance
+// was already spent.
+{
+  const p = paymentRequiredPayload(CHALLENGE, "Time", { trialSigner: null });
+  ck("A1 anonymous challenge does not claim exhaustion", !("trialExhausted" in p));
+  ck("A2 anonymous challenge names the missing identity", p.trialIdentityRequired === true);
+  ck("A3 anonymous challenge keeps the payable accepts[]", p.accepts.length === 1);
+  ck("A4 anonymous howToProceed points at privateKey", String(p.howToProceed).includes("privateKey"));
+}
+
+// ── signed caller, allowance really spent: keep the server's verdict ────
+{
+  const exhausted = { ...CHALLENGE, trial: { mode: "wallet", wallet: SIG, remaining: 0, max: 5 } };
+  const p = paymentRequiredPayload(exhausted, "Time", { trialSigner: SIG });
+  ck("E1 signed + trial object keeps trialExhausted", p.trialExhausted === true);
+  ck("E2 signed + trial object adds no identity flag", !("trialIdentityRequired" in p));
+}
+
 // ── degenerate input must not throw ────────────────────────────────────
 {
   const p = paymentRequiredPayload(null, "Time", { trialSigner: null });

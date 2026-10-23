@@ -83,9 +83,24 @@ export function paymentRequiredPayload(
       : refusalAdvice(ctx),
   };
 
-  // Only echo trial state when the response actually stated it.
-  if (typeof doc.trialExhausted === "boolean") {
+  // Echo trial state only when the response stated it AND the client actually
+  // identified a wallet. The gateway's anonymous branch sets
+  // `trialExhausted: true` for every caller that arrives without a signature
+  // (handler_discovery.go:199, handler_x402.go:897, handler_mcp.go:214): on
+  // that path the field means "this anonymous call has no trial", not "this
+  // wallet's 5 are spent". Passing it through told a first-time caller its
+  // free allowance was gone before it had used one — and an agent that
+  // branches on the boolean walks away from the trial path entirely.
+  //
+  // Identification here means we signed (trialSigner) or the server attached
+  // the per-wallet `trial` object {mode,wallet,remaining,max}, which it does
+  // only on the exhausted-with-a-wallet branch. Anonymous + true becomes
+  // `trialIdentityRequired`, which is what the caller can act on.
+  const identified = Boolean(ctx.trialSigner) || (doc.trial && typeof doc.trial === "object");
+  if (typeof doc.trialExhausted === "boolean" && identified) {
     out.trialExhausted = doc.trialExhausted;
+  } else if (doc.trialExhausted === true) {
+    out.trialIdentityRequired = true;
   }
 
   return out;
