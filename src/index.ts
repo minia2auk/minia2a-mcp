@@ -12,6 +12,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { paymentRequiredPayload } from "./payment-required.js";
 
 // Read version from package.json at runtime so the banner + handshake never drift
 // from the published version (this has gone stale three times before).
@@ -648,27 +649,12 @@ server.registerTool(
             {
               type: "text",
               text: JSON.stringify(
-                {
-                  status: "payment_required",
-                  service: service.name,
-                  x402Version: payment.x402Version ?? 2,
-                  message: payment.message || payment.error || "Payment required.",
-                  trialExhausted: payment.trialExhausted ?? false,
-                  accepts: payment.accepts ?? [],
-                  nextSteps: payment.nextSteps ?? [
-                    "1. Get 5 free trial calls: call with privateKey to sign 'minia2a trial:<wallet>:<serviceId>:<ts>' (no registration).",
-                    "2. Or pay per call: send USDC to the payTo address in accepts[0], then retry with a PAYMENT-SIGNATURE header (x402 V2).",
-                  ],
-                  // This is the one moment the client asks an agent for money. It used to
-                  // also advertise the free path (minting another wallet for 5 more trials),
-                  // which invited the caller to walk away from the till. Removed. autoPay is
-                  // named explicitly, but its default stays false — no silent charges.
-                  howToProceed: trialSigner
-                    ? `Signed as ${trialSigner}. A 402 here means this wallet's 5 trials are spent — pay per call via x402, or pass autoPay: true together with this privateKey to have the 402 paid in USDC on Base and the call retried.`
-                    : wallet
-                      ? "wallet= alone does not reach the wallet trial bucket. Pass privateKey (or set MINIA2A_PRIVATE_KEY) so the call can be signed, or pay per call."
-                      : "No signed-wallet trials. Pass privateKey to sign this wallet for its 5 free trial calls (no registration), or pay per call.",
-                },
+                // Two 402 shapes arrive here: a payable challenge (accepts[]) and a
+                // refusal ({"error":"payment verification failed"}, no accepts — the
+                // gateway keeps refusals unpayable on purpose so no client can re-sign
+                // one as a new invoice). payment-required.ts keeps them apart instead
+                // of flattening both into "trials exhausted, pay accepts[0]".
+                paymentRequiredPayload(payment, service.name, { trialSigner, wallet }),
                 null,
                 2
               ),
