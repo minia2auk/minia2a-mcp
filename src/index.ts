@@ -210,25 +210,39 @@ const foldSearch = (s: string) => s.toLowerCase().replace(/[-_]+/g, " ").trim();
 
 // ── Tool: list_services ──────────────────────────────────────────────
 
-server.tool(
+// Strict input schema (2026-11-05). Same failure as call_service had, one tool over:
+// the published `tools/list` schema says `additionalProperties: false`, but a raw
+// shape goes through `z.object(shape)`, whose default is STRIP — so the promise was
+// never kept and an unknown key was deleted in silence. Measured on the published
+// 1.2.12 tarball: `{"query":"mime","limit":3}` returned the first three catalog
+// entries (`x402-gas`, `x402-captcha-solve`, ...) with `isError:false`. The caller
+// asked one thing, got an unfiltered answer it could not distinguish from a filtered
+// one, and the answer looked confident. `.strict()` turns that into a named error
+// before the request is built; `registerTool` is what makes `.strict()` reachable.
+server.registerTool(
   "minia2a_list_services",
-  "List available x402 services on minia2a.uk — the micropayment marketplace for AI agents. Returns service name, description, price, and endpoint for each service. Use this to discover what capabilities are available before calling them.",
   {
-    category: z
-      .string()
-      .optional()
-      .describe("Filter by category (e.g., 'crypto', 'utility', 'data', 'ai')"),
-    search: z
-      .string()
-      .optional()
-      .describe("Search term to filter services by id, name, or description. Hyphens and underscores are treated as spaces, so 'crypto-price' and 'crypto_price' both match."),
-    limit: z
-      .number()
-      .optional()
-      .default(20)
-      .describe("Max number of results to return (default 20)"),
+    description:
+      "List available x402 services on minia2a.uk — the micropayment marketplace for AI agents. Returns service name, description, price, and endpoint for each service. Use this to discover what capabilities are available before calling them.",
+    inputSchema: z
+      .object({
+        category: z
+          .string()
+          .optional()
+          .describe("Filter by category (e.g., 'crypto', 'utility', 'data', 'ai')"),
+        search: z
+          .string()
+          .optional()
+          .describe("Search term to filter services by id, name, or description. Hyphens and underscores are treated as spaces, so 'crypto-price' and 'crypto_price' both match."),
+        limit: z
+          .number()
+          .optional()
+          .default(20)
+          .describe("Max number of results to return (default 20)"),
+      })
+      .strict(),
+    annotations: { readOnlyHint: true },
   },
-  { readOnlyHint: true },
   async ({ category, search, limit }) => {
     let services = await fetchServices();
 
@@ -397,23 +411,34 @@ server.tool(
 
 // ── Tool: register ───────────────────────────────────────────────────
 
-server.tool(
+// Strict input schema (2026-11-05). This is the other tool where a stripped key
+// changes the answer rather than just the wording: `wallet` and `signature` are
+// both optional, so a misspelled key is deleted, `wallet` arrives undefined, and
+// the tool *generates a fresh wallet* instead of using the caller's. The caller
+// gets `status: "registered"` with a key it did not ask for and no signal that its
+// own address was never read.
+server.registerTool(
   "minia2a_register",
-  "Register a self-custody wallet on minia2a.uk to publish your own services (EIP-191 signature). Registration is for publishing — it is NOT required for trials: any wallet signed in minia2a_call_service already gets 5 free trial calls. If you don't provide a wallet+signature, this tool generates a fresh wallet, signs 'minia2a register: <your-wallet>' with EIP-191, registers it, and returns the private key — store it, the platform never holds it.",
   {
-    name: z
-      .string()
-      .describe("A name for your agent (e.g., 'my-trading-bot')"),
-    wallet: z
-      .string()
-      .optional()
-      .describe("Your existing self-custody wallet address (0x...). Omit to have a fresh wallet generated for you."),
-    signature: z
-      .string()
-      .optional()
-      .describe("EIP-191 signature of 'minia2a register: <wallet>'. Required if you supply a wallet."),
+    description:
+      "Register a self-custody wallet on minia2a.uk to publish your own services (EIP-191 signature). Registration is for publishing — it is NOT required for trials: any wallet signed in minia2a_call_service already gets 5 free trial calls. If you don't provide a wallet+signature, this tool generates a fresh wallet, signs 'minia2a register: <your-wallet>' with EIP-191, registers it, and returns the private key — store it, the platform never holds it.",
+    inputSchema: z
+      .object({
+        name: z
+          .string()
+          .describe("A name for your agent (e.g., 'my-trading-bot')"),
+        wallet: z
+          .string()
+          .optional()
+          .describe("Your existing self-custody wallet address (0x...). Omit to have a fresh wallet generated for you."),
+        signature: z
+          .string()
+          .optional()
+          .describe("EIP-191 signature of 'minia2a register: <wallet>'. Required if you supply a wallet."),
+      })
+      .strict(),
+    annotations: { destructiveHint: true },
   },
-  { destructiveHint: true },
   async ({ name, wallet, signature }) => {
     try {
       const { ok, data, wallet: address, privateKey } = await registerAgent(
