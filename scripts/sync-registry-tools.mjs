@@ -61,13 +61,25 @@ child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initia
 const listed = await rpc("tools/list", {});
 child.kill();
 
-const tools = (listed.result?.tools ?? []).map((t) => {
-  const schema = JSON.parse(JSON.stringify(t.inputSchema ?? { type: "object", properties: {} }));
-  delete schema.$schema;
-  delete schema.title;
-  const out = { name: t.name, description: t.description ?? "", inputSchema: schema };
-  return out;
-});
+// The registry caps its `publisher-provided` extension at 4 KB, which the full
+// tools/list schemas blow through (5,854 B on 2026-11-05 — `publish` answered
+// HTTP 400 and named the limit). So the record carries NAME + the tool's own
+// first sentence and deliberately NO inputSchema: a field-level schema is the
+// part that can be wrong at the argument name (the `url` vs `endpointUrl`
+// drift), and a partial description cannot contradict the tool the way a
+// wrong schema can. Full shapes stay on the package, which is what the record
+// points at.
+const firstSentence = (s, max = 110) => {
+  const flat = String(s ?? "").replace(/\s+/g, " ").trim();
+  const cut = flat.search(/[.!?](\s|$)/);
+  const s1 = cut > 0 ? flat.slice(0, cut + 1) : flat;
+  return s1.length <= max ? s1 : s1.slice(0, max - 1).trimEnd() + "…";
+};
+
+const tools = (listed.result?.tools ?? []).map((t) => ({
+  name: t.name,
+  description: firstSentence(t.description),
+}));
 
 if (tools.length === 0) {
   console.error("ABORT: tools/list returned nothing; refusing to write an empty record");
@@ -78,6 +90,18 @@ const record = JSON.parse(fs.readFileSync(serverJsonPath, "utf8"));
 const meta = record._meta?.["io.modelcontextprotocol.registry/publisher-provided"];
 if (!meta) {
   console.error("ABORT: server.json has no publisher-provided _meta block");
+  process.exit(2);
+}
+
+// The registry caps the publisher-provided extension at 4 KB and answers only
+// "HTTP 400 Failed to publish server" when it is over. Measure it here, where
+// the message can say by how much. Compact JSON is what the registry counts.
+const META_LIMIT = 4096;
+const metaBytes = Buffer.byteLength(JSON.stringify({ ...meta, tools }), "utf8");
+if (metaBytes > META_LIMIT) {
+  console.error(
+    `ABORT: _meta would be ${metaBytes} B, over the registry's ${META_LIMIT} B limit by ${metaBytes - META_LIMIT}`
+  );
   process.exit(2);
 }
 
