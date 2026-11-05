@@ -303,9 +303,82 @@ server.registerTool(
 
 // ── Tool: get_service ────────────────────────────────────────────────
 
+// What parameters does this service actually take? (2026-11-05)
+//
+// The tool description promised "input schema" and the answer never carried one:
+// `/api/services` has no schema field, so `get_service` returned id/name/price/
+// endpoint and stopped. Measured on the published 1.2.12 tarball, the JSON for
+// `x402-mime-type` had no key an agent could read to learn that the parameter is
+// `ext` — the very next step, `call_service`, needs exactly that.
+//
+// The catalog does not hold it, but the seller ships it: every first-party 402
+// carries `extensions.bazaar.info.input` (the same example the discovery layer
+// reads). One unpaid GET, no wallet, no payment header — a challenge, not a call,
+// so nothing is charged and no trial is spent.
+//
+// Absent stays absent: when the endpoint answers without that block, or cannot be
+// reached, the answer says so and points at the documentation URL rather than
+// omitting the key silently (an empty `input: {}` would read as "takes nothing").
+type ServiceInputHint = {
+  from: string;
+  method?: string;
+  queryParams?: Record<string, unknown>;
+  body?: unknown;
+};
+
+async function fetchInputHint(
+  endpoint: string
+): Promise<{ input: ServiceInputHint | null; inputNote?: string }> {
+  try {
+    const resp = await fetch(endpoint, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    let doc: any = null;
+    const hdr = resp.headers.get("payment-required");
+    if (hdr) {
+      try {
+        doc = JSON.parse(Buffer.from(hdr, "base64").toString("utf8"));
+      } catch {
+        // fall through to the body
+      }
+    }
+    if (!doc || !doc.extensions) {
+      try {
+        doc = await resp.json();
+      } catch {
+        // keep whatever the header gave us
+      }
+    }
+    const example = doc?.extensions?.bazaar?.info?.input;
+    if (!example || typeof example !== "object") {
+      return {
+        input: null,
+        inputNote:
+          `the endpoint's 402 carries no extensions.bazaar.info.input (HTTP ${resp.status}); ` +
+          "read the documentation URL for the parameter names",
+      };
+    }
+    const input: ServiceInputHint = { from: "402 extensions.bazaar.info.input" };
+    if (typeof example.method === "string") input.method = example.method;
+    if (example.queryParams && typeof example.queryParams === "object") {
+      input.queryParams = example.queryParams;
+    }
+    if (example.body !== undefined) input.body = example.body;
+    return { input };
+  } catch (e: any) {
+    return {
+      input: null,
+      inputNote:
+        `could not read the endpoint's 402 (${e?.name || "error"}); ` +
+        "read the documentation URL for the parameter names",
+    };
+  }
+}
+
 server.tool(
   "minia2a_get_service",
-  "Get detailed information about a specific x402 service on minia2a.uk, including its price, endpoint URL, input schema, and usage instructions. Use this before calling a service to understand what it needs.",
+  "Get detailed information about a specific x402 service on minia2a.uk: price, endpoint URL, what parameters it takes (read from the service's own 402 example — one unpaid GET, nothing charged), and usage instructions. Use this before calling a service to understand what it needs.",
   {
     serviceId: z.string().describe("The service ID or name to get details for"),
   },
@@ -330,6 +403,8 @@ server.tool(
       };
     }
 
+    const { input, inputNote } = await fetchInputHint(service.endpoint);
+
     return {
       content: [
         {
@@ -343,6 +418,7 @@ server.tool(
               price: service.priceCents != null
                 ? formatCents(service.priceCents)
                 : "varies by service",
+              ...(input ? { input } : { inputNote }),
               category: service.category || "uncategorized",
               tags: service.tags || [],
               how_to_call: `Call ${service.endpoint} with a signed wallet (privateKey) to spend one of your wallet's 5 free trial calls — no registration needed. Or call anonymously to hit the paid 402 path. When trials run out you get HTTP 402 with an accepts[] payment array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2).`,
