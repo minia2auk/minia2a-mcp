@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "uk.minia2a/minia2a-mcp",
   "description": "minia2a.uk — x402 pay-per-call APIs for AI agents, USDC on Base, 5 free trials per wallet.",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "websiteUrl": "https://minia2a.uk",
   "repository": {
     "url": "https://github.com/minia2auk/minia2a-mcp",
@@ -14,7 +14,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "minia2a-mcp",
-      "version": "1.2.15",
+      "version": "1.2.16",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
@@ -53,40 +53,47 @@
       "tools": [
         {
           "name": "minia2a_list_services",
-          "description": "List available x402 services on minia2a.uk — the micropayment marketplace for AI agents. Returns service name, description, price, and endpoint for each service.",
+          "description": "List available x402 services on minia2a.uk — the micropayment marketplace for AI agents. Returns service name, description, price, and endpoint for each service. Use this to discover what capabilities are available before calling them.",
           "inputSchema": {
             "type": "object",
             "properties": {
               "category": {
                 "type": "string",
-                "description": "Filter by category (ai, crypto, finance, web, security, tools, utility, defi, identity, infra, text, premium)"
+                "description": "Filter by category (e.g., 'crypto', 'utility', 'data', 'ai')"
               },
               "search": {
                 "type": "string",
-                "description": "Search query to filter services by name or description"
+                "description": "Search term to filter services by id, name, or description. Hyphens and underscores are treated as spaces, so 'crypto-price' and 'crypto_price' both match."
+              },
+              "limit": {
+                "type": "number",
+                "default": 20,
+                "description": "Max number of results to return (default 20)"
               }
-            }
+            },
+            "additionalProperties": false
           }
         },
         {
           "name": "minia2a_get_service",
-          "description": "Get detailed information about a specific x402 service on minia2a.uk, including its price, endpoint URL, input schema, and usage instructions.",
+          "description": "Get detailed information about a specific x402 service on minia2a.uk: price, endpoint URL, what parameters it takes (read from the service's own 402 example — one unpaid GET, nothing charged), and usage instructions. Use this before calling a service to understand what it needs.",
           "inputSchema": {
             "type": "object",
             "properties": {
               "serviceId": {
                 "type": "string",
-                "description": "ID or slug of the service to get details for"
+                "description": "The service ID or name to get details for"
               }
             },
             "required": [
               "serviceId"
-            ]
+            ],
+            "additionalProperties": false
           }
         },
         {
           "name": "minia2a_get_stats",
-          "description": "Get current platform statistics for minia2a.uk — total services, registered agents, transaction volume, uptime, and more.",
+          "description": "Get current platform statistics for minia2a.uk — total services, registered agents, transaction volume, uptime, and more. Useful for understanding the marketplace's scale and health.",
           "inputSchema": {
             "type": "object",
             "properties": {}
@@ -94,66 +101,80 @@
         },
         {
           "name": "minia2a_register",
-          "description": "Register a self-custody wallet on minia2a.uk to publish your own services (EIP-191 signature). Registration is for publishing — it is NOT required for trials: any wallet signed in minia2a_call_service already gets 5 free trial calls. If no wallet+signature is provided, a fresh wallet is generated and the private key returned.",
+          "description": "Register a self-custody wallet on minia2a.uk to publish your own services (EIP-191 signature). Registration is for publishing — it is NOT required for trials: any wallet signed in minia2a_call_service already gets 5 free trial calls. If you don't provide a wallet+signature, this tool generates a fresh wallet, signs 'minia2a register: <your-wallet>' with EIP-191, registers it, and returns the private key — store it, the platform never holds it.",
           "inputSchema": {
             "type": "object",
             "properties": {
               "name": {
                 "type": "string",
-                "description": "Your agent name"
+                "description": "A name for your agent (e.g., 'my-trading-bot')"
               },
               "wallet": {
                 "type": "string",
-                "description": "Your existing self-custody wallet address (0x...). Omit to auto-generate."
+                "description": "Your existing self-custody wallet address (0x...). Omit to have a fresh wallet generated for you."
               },
               "signature": {
                 "type": "string",
-                "description": "EIP-191 signature of 'minia2a register: <wallet>'. Required if wallet supplied."
+                "description": "EIP-191 signature of 'minia2a register: <wallet>'. Required if you supply a wallet."
               }
             },
             "required": [
               "name"
-            ]
+            ],
+            "additionalProperties": false
           }
         },
         {
           "name": "minia2a_call_service",
-          "description": "Call an x402 service on minia2a.uk with a signed wallet (5 free trial calls, no registration) or the paid 402 path. Handles the HTTP 402 payment flow.",
+          "description": "Call an x402 service on minia2a.uk. Three access paths: (1) omit everything for the paid 402 path (sign a wallet for 5 free trial calls — no registration); (2) pass privateKey (or set MINIA2A_PRIVATE_KEY) for your wallet's own 5 trials — the key never leaves this process, it only signs the per-call trial message; (3) when both are exhausted the endpoint returns HTTP 402 with a machine-readable accepts[] array — pay in USDC and retry with a PAYMENT-SIGNATURE header (x402 V2). Set autoPay:true together with privateKey to have a 402 paid automatically in USDC on Base and the call retried — the wallet must hold USDC or the call still returns payment_required (never charges silently). Note that wallet= on its own does NOT reach the wallet bucket; the signature is what does. Service parameters go INSIDE `params`; a top-level key that is not one of the five declared names is rejected by name rather than dropped.",
           "inputSchema": {
             "type": "object",
             "properties": {
               "serviceId": {
                 "type": "string",
-                "description": "ID or slug of the service to call"
-              },
-              "wallet": {
-                "type": "string",
-                "description": "Your registered self-custody wallet address (0x...)"
+                "description": "The service ID (e.g., 'x402-gas') or full endpoint path"
               },
               "params": {
                 "type": "object",
-                "description": "Parameters to pass to the service"
+                "additionalProperties": {},
+                "default": {},
+                "description": "JSON parameters to send to the service. These are the service's OWN parameter names (e.g. {\"ext\":\"json\"} for x402-mime-type), nested here — not flattened onto the top level."
+              },
+              "wallet": {
+                "type": "string",
+                "description": "Your self-custody wallet address (0x...). Without privateKey this alone does not draw on the wallet's trial bucket."
+              },
+              "privateKey": {
+                "type": "string",
+                "description": "Private key of your wallet, used locally to sign the trial message (EIP-191). Never transmitted — only the resulting signature is sent. Falls back to the MINIA2A_PRIVATE_KEY env var."
+              },
+              "autoPay": {
+                "type": "boolean",
+                "default": false,
+                "description": "When true and a privateKey is available, a 402 Payment Required response is paid automatically in USDC on Base via x402 and the call retried. Default false — you get a payment_required response instead of any automatic charge. Empty wallet (no USDC) still returns payment_required."
               }
             },
             "required": [
               "serviceId"
-            ]
+            ],
+            "additionalProperties": false
           }
         },
         {
           "name": "minia2a_check_endpoint",
-          "description": "Validate any x402 endpoint for autonomous-agent (Claude Code auto-mode) readiness. Checks 9 signals: HTTP reachability, JSON content-type, payment challenge (canonical PAYMENT-REQUIRED header or legacy x-402-* headers), payment amount, network, recipient, trial info, registration path, and /api/agent-ready handshake.",
+          "description": "Validate any x402 endpoint for autonomous-agent (Claude Code auto-mode) readiness. Checks 9 signals: HTTP reachability, JSON content-type, payment challenge (canonical PAYMENT-REQUIRED header or legacy x-402-* headers), payment amount, network, recipient, trial info, registration path, and /api/agent-ready handshake. Returns a score (0-100%) with per-check PASS/FAIL detail. Use this before calling a paid endpoint to verify it works with autonomous agents.",
           "inputSchema": {
             "type": "object",
             "properties": {
-              "url": {
+              "endpointUrl": {
                 "type": "string",
-                "description": "URL of the x402 endpoint to validate"
+                "description": "The endpoint URL to validate (e.g., 'https://minia2a.uk/x402/gas')"
               }
             },
             "required": [
-              "url"
-            ]
+              "endpointUrl"
+            ],
+            "additionalProperties": false
           }
         }
       ]
