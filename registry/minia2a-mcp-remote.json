@@ -1,0 +1,67 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "uk.minia2a/minia2a-mcp-remote",
+  "title": "minia2a — hosted x402 API marketplace (HTTP)",
+  "description": "minia2a.uk — hosted MCP over streamable HTTP: 1,800+ pay-per-call APIs, USDC on Base.",
+  "version": "1.0.1",
+  "websiteUrl": "https://minia2a.uk",
+  "icons": [
+    {
+      "src": "https://minia2a.uk/favicon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "180x180"
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/minia2auk/minia2a-mcp",
+    "source": "github",
+    "id": "1356246519"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://minia2a.uk/mcp"
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "categories": [
+        "ai-agents",
+        "payments",
+        "crypto",
+        "api-marketplace",
+        "developer-tools"
+      ],
+      "tags": [
+        "x402",
+        "usdc",
+        "micropayments",
+        "agent-economy",
+        "m2m",
+        "machine-to-machine",
+        "auto-mode",
+        "claude-code",
+        "agent-payments",
+        "402-payment-required",
+        "trial-first",
+        "pay-per-call"
+      ],
+      "license": "MIT",
+      "homepage": "https://minia2a.uk",
+      "transport": "streamable-http",
+      "environmentVariables": [],
+      "tools": [
+        {
+          "name": "service_discovery",
+          "description": "Search the minia2a catalog for x402-payable services (query in, matching services out)."
+        },
+        {
+          "name": "get_stats",
+          "description": "Platform statistics: service count, agents, settlement volume."
+        }
+      ]
+    }
+  }
+}
