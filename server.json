@@ -1,9 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "uk.minia2a/minia2a-mcp",
-  "description": "minia2a.uk — x402 pay-per-call APIs for AI agents, USDC on Base, 5 free trials per wallet.",
+  "title": "minia2a — x402 API marketplace",
+  "description": "minia2a.uk x402 marketplace — 1,800+ pay-per-call API services, USDC micropayments on Base.",
   "version": "1.2.17",
   "websiteUrl": "https://minia2a.uk",
+  "icons": [
+    {
+      "src": "https://minia2a.uk/favicon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "180x180"
+      ]
+    }
+  ],
   "repository": {
     "url": "https://github.com/minia2auk/minia2a-mcp",
     "source": "github",
