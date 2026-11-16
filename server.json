@@ -3,7 +3,7 @@
   "name": "uk.minia2a/minia2a-mcp",
   "title": "minia2a — x402 API marketplace",
   "description": "minia2a.uk x402 marketplace — 1,800+ pay-per-call API services, USDC micropayments on Base.",
-  "version": "1.2.17",
+  "version": "1.2.18",
   "websiteUrl": "https://minia2a.uk",
   "icons": [
     {
@@ -24,7 +24,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "minia2a-mcp",
-      "version": "1.2.17",
+      "version": "1.2.18",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
