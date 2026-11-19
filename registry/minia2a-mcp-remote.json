@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "uk.minia2a/minia2a-mcp-remote",
   "title": "minia2a — hosted x402 API marketplace (HTTP)",
-  "description": "minia2a.uk — hosted MCP over streamable HTTP: 1,800+ pay-per-call APIs, USDC on Base.",
-  "version": "1.0.1",
+  "description": "minia2a.uk — hosted MCP over streamable HTTP: x402 pay-per-call APIs, USDC on Base.",
+  "version": "1.0.2",
   "websiteUrl": "https://minia2a.uk",
   "icons": [
     {
