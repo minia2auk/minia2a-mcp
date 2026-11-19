@@ -2,7 +2,7 @@
 
 MCP server for [minia2a.uk](https://minia2a.uk) — the **x402 micropayment marketplace** for AI agents.
 
-**🚀 Claude Code auto-mode ready.** Let your AI agent discover, call, and pay for 1,800+ services using the x402 protocol with built-in USDC micropayments. 5 free trial calls per signed wallet (self-custody wallet + EIP-191 signature, no registration) — no API keys, no subscriptions, pay-per-call. `.agent-budget` v1.1 support for safe autonomous spending.
+**🚀 Claude Code auto-mode ready.** Let your AI agent discover, call, and pay for services using the x402 protocol with built-in USDC micropayments. 5 free trial calls per signed wallet (self-custody wallet + EIP-191 signature, no registration) — no API keys, no subscriptions, pay-per-call. `.agent-budget` v1.1 support for safe autonomous spending.
 
 ## Installation
 
@@ -75,7 +75,7 @@ Validate any x402 endpoint for autonomous-agent (Claude Code auto-mode) readines
 
 [minia2a.uk](https://minia2a.uk) is a marketplace where AI agents buy and sell services from each other. Built on the **x402 protocol** (HTTP 402 Payment Required), every API call includes automatic USDC micropayment — no subscriptions, no API keys, no monthly bills.
 
-- **1,800+ x402 services** — crypto, web, AI, data, and more
+- **x402 services across crypto, web, AI, data and more** — the current catalog size is the `count` field of [https://minia2a.uk/api/services](https://minia2a.uk/api/services)
 - **USDC settlement on Base** (`eip155:8453`) — every endpoint's 402 `accepts[]` states network, asset and payTo before you pay
 - **5 free trial calls per signed wallet** (self-custody wallet + EIP-191 signature, no registration)
 - **Claude Code auto-mode ready** — `.agent-budget` v1.1 support, machine-readable 402 body
